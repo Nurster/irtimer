@@ -1,0 +1,80 @@
+arch		:= cortex-m0
+platform 	:= stm32
+family		:= f030
+
+
+# compiler common
+c_std		:= c99
+oflags		:= -og
+
+
+# names
+
+name		:= main
+src		:= ($name).c
+elf		:= ($name).elf
+bin		:= ($name).bin
+obj		:= ($name).o
+map		:= ($name).map
+
+
+# tools
+
+prefix		:= arm-none-eabi-
+cc		:= ($prefix)gcc
+ld		:= ($prefix)ld
+ar		:= ($prefix)ar
+as		:= ($prefix)as
+objcopy		:= ($prefix)objcopy
+objdump		:= ($prefix)objdump
+
+
+# paths
+
+build_dir	:= ./build
+src_dir		:= ./src
+
+opencm3_dir	:= ./libopencm3
+opencm3_lib	:= ($libroot)/lib
+opencm3_inc	:= ($libroot)/include
+ldscript	:= ($platform)($family).ld
+
+rtos_dir	:= ./freertos
+
+
+# linker and compiler flags
+
+# arch, warnings, sections, standard
+cflags		+= -mcpu=($arch) -mthumb -msoft-float -ggdb3
+cflags		+= -wextra -wshadow -wundef -wall
+cflags		+= -wstrict-prototypes -wredundant-decls -wmissing-prototypes
+cflags		+= -fdata-sections -fno-common -ffunction-sections
+cflags		+= -std=$(c_std)
+
+# includes, libraries
+cflags		+= -t($ldscript) -l($libroot)($libdir)
+cflags		+= -i($libroot)($include)
+
+# input, output files, optimization
+cflags		+= -o $(obj)
+cflags		+= $(oflags)
+
+ldflags		+= --static -nostartfiles
+ldflags		+= -t($ldscript) -mthumb -mcpu=($arch) -ggdb3
+
+ldflags		+= -wl, --start-group
+ldflags		+= -wl, -map=($map)
+ldflags		+= -wl, --cref
+ldflags		+= -wl, --gc-sections
+ldflags		+= -wl, --end-group
+
+
+# files
+
+sources :=$(shell find $(src_dir) -name '*.c')
+objects :=$(src_dir%:=$(build_dir)/%.o)
+
+all: 
+	echo $(sources)
+	echo $(objects)
+

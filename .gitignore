@@ -1,0 +1,11 @@
+build
+Binaries
+Archives
+bin
+.log
+.ini
+.trace
+.elf
+.bin
+.json
+.settings
