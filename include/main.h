@@ -70,4 +70,6 @@ void setVericalScrollingStartAddress(uint16_t startAddress);
 void drawEllipse(int xm, int ym, int a, int b, uint8_t redByte, uint8_t greenByte, uint8_t blueByte);
 void clearScreen(void);
 void demoDisplay(void);
+void demoTask(void *pvParameters __attribute__((unused)));
+void taskTwo(void *pvParameters __attribute__((unused)));
 //void sys_tick_handler(void);

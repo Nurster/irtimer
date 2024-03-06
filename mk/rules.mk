@@ -56,21 +56,18 @@ OOCD	?= openocd
 
 OPENCM3_INC = $(OPENCM3_DIR)/include
 
-
 # Inclusion of library header files
 INCLUDES += $(patsubst %,-I%, . $(OPENCM3_INC) )
+INCLUDES += $(patsubst %,-I%, . $(RTOS_INCDIR) )
 
 # add rtos library dependency
 
-RTOS_LIB = $(RTOS_LIBDIR)/lib$(RTOS_NAME).a
-
 LIBDEPS += $(RTOS_LIB)
 
-RTOS_OBJS = $(RTOS_CFILES:%.c=$(BUILD_DIR)/%.o)
 OBJS = $(CFILES:%.c=$(BUILD_DIR)/%.o)
 OBJS += $(CXXFILES:%.cxx=$(BUILD_DIR)/%.o)
 OBJS += $(AFILES:%.S=$(BUILD_DIR)/%.o)
-GENERATED_BINS = $(PROJECT).elf $(PROJECT).bin $(PROJECT).map $(PROJECT).list $(PROJECT).lss $(RTOS_LIB)
+GENERATED_BINS = $(PROJECT).elf $(PROJECT).bin $(PROJECT).map $(PROJECT).list $(PROJECT).lss $(RTOS_LIB) $(RTOS_OBJS)
 
 TGT_CPPFLAGS += -MD
 TGT_CPPFLAGS += -Wall -Wundef $(INCLUDES)
@@ -146,20 +143,30 @@ GENERATED_BINS += $(LDSCRIPT)
 endif
 
 # build the rtos libary object and dependency files .o .d
-$(RTOS_BUILD_DIR)/%.o: %.c  
+$(RTOS_BINDIR)/%.o: $(RTOS_SRCDIR)/%.c
+#$(RTOS_OBJS): $(RTOS_SRCS)
+
 	@printf "  CC\t$<\n"
-	@mkdir -p $(dir $@)
-	$(Q)$(CC) $(RTOS_CFLAGS) $(CFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
+	#@mkdir -p $(dir $@)
+	$(Q)$(CC) $(TGT_CFLAGS) $(CFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 # build the rtos library archive .a
 #$(RTOS_LIBDIR)/$(RTOS_NAME).a : $(RTOS_OBJS)
 $(RTOS_LIB) : $(RTOS_OBJS)
-	@mkdir -p $(RTOS_LIBDIR)
+	@echo "\nLIBDEPS:\n" $(LIBDEPS) "\n"
+	@echo "\nLDLIBS:\n" $(LDLIBS) "\n"
+	@echo "\nRTOS_SRCS:\n" $(RTOS_SRCS) "\n"
+	@echo "\nRTOS_CFLAGS:\n" $(RTOS_CFLAGS) "\n"	
+	@echo "\nCFLAGS:\n" $(CFLAGS) "\n"
+	@echo "\nLDFLAGS:\n" $(LDFLAGS) "\n"
+
 	$(AR) $(RTOS_ARFLAGS) $(RTOS_LIB) $(RTOS_OBJS)
 
 # Need a special rule to have a bin dir
 $(BUILD_DIR)/%.o: %.c
+	@echo "\nCFLAGS:\n" $(CFLAGS) "\n"	
 	@printf "  CC\t$<\n"
+	@echo "---------------------------\n"	
 	@mkdir -p $(dir $@)
 	$(Q)$(CC) $(TGT_CFLAGS) $(CFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
@@ -174,7 +181,7 @@ $(BUILD_DIR)/%.o: %.S
 	$(Q)$(CC) $(TGT_ASFLAGS) $(ASFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 $(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
-	echo $(LIBDEPS)
+	@echo "PROJECT.elf: " $(LIBDEPS)
 	@printf "  LD\t$@\n"
 	$(Q)$(LD) $(TGT_LDFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
@@ -204,6 +211,8 @@ else
 endif
 
 clean:
+	echo $(BUILD_DIR)
+	
 	rm -rf $(BUILD_DIR) $(GENERATED_BINS) 
 
 .PHONY: all clean flash

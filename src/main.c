@@ -33,8 +33,8 @@
 #include <stdio.h>
 #include "main.h"
 
-volatile uint32_t sysTickCounter = 0;
 TaskHandle_t demoHandle;
+TaskHandle_t taskTwoHandle;
 
 /*
 void sys_tick_handler(void) {
@@ -58,7 +58,6 @@ static void setupClock(void) {
     rcc_clock_setup_in_hse_8mhz_out_48mhz();
 #elif STM32F1
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
-
 #elif STM32F4
     rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[RCC_CLOCK_3V3_84MHZ]);
 #endif
@@ -66,13 +65,6 @@ static void setupClock(void) {
     rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_SPI1);
     rcc_periph_clock_enable(RCC_TIM3);
-}
-
-static void setupSysTick(void) {
-    systick_set_clocksource(rcc_apb1_frequency);
-    systick_set_frequency(1000, rcc_apb1_frequency);
-    systick_counter_enable();
-    systick_interrupt_enable();
 }
 
 static void setupTimer(void) {
@@ -459,6 +451,13 @@ void vApplicationStackOverflowHook(
 	while(1);
 }
 
+void taskTwo(void *pvParameters __attribute__((unused))) {
+	printf("Hello World!");
+	while (2) {
+
+	}
+}
+
 void demoTask(void *pvParameters __attribute__((unused))) {
 	initDisplay();
 	while (2) {
@@ -469,14 +468,18 @@ void demoTask(void *pvParameters __attribute__((unused))) {
 int main(void)
 {
 
+	volatile BaseType_t createResult;
+
 	setupClock();
 	setupGpio();
 	setupSpi();
     /*setupSysTick();*/
-	xTaskCreate(demoTask, "Demo", 800, NULL, 0, &demoHandle);
+	createResult = xTaskCreate(demoTask, "Demo", 200, NULL, 0, &demoHandle);
+	createResult = xTaskCreate(taskTwo, "Two", 200, NULL, 0, &taskTwoHandle);
+
 	/*demoDisplay();*/
     /*setupTimer();*/
-
+	/*NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );*/
 	vTaskStartScheduler();
 
 	return 0;
