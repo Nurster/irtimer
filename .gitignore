@@ -2,6 +2,7 @@ build
 Binaries
 Archives
 bin
+ld
 .log
 .ini
 .trace

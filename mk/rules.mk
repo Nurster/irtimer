@@ -10,7 +10,7 @@
 # LDSCRIPT - full path, eg ../../examples/stm32/f4/stm32f4-discovery/stm32f4-discovery.ld
 # OPENCM3_LIB - the basename, eg: opencm3_stm32f4
 # OPENCM3_DEFS - the target define eg: -DSTM32F4
-# ARCH_FLAGS - eg, -mthumb -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+# ARCH_FLAGS - eg, -mthumb -mcpu=cortex-m4 -mfloat-abi=ha:rd -mfpu=fpv4-sp-d16
 #    (ie, the full set of cpu arch flags, _none_ are defined in this file)
 #
 ### OPTIONAL ###
@@ -33,7 +33,7 @@
 
 BUILD_DIR ?= bin
 OPT ?= -Og
-RTOS_OPT ?= -O2
+RTOS_OPT ?= -Og
 CSTD ?= -std=c99
 
 # Be silent per default, but 'make V=1' will show all compiler calls.
@@ -73,15 +73,15 @@ TGT_CPPFLAGS += -MD
 TGT_CPPFLAGS += -Wall -Wundef $(INCLUDES)
 TGT_CPPFLAGS += $(INCLUDES) $(OPENCM3_DEFS)
 
-TGT_CFLAGS += $(CSTD)
+TGT_CFLAGS += $(OPT) -ggdb3 $(CSTD)
 TGT_CFLAGS += $(ARCH_FLAGS)
 TGT_CFLAGS += -fno-common
 TGT_CFLAGS += -ffunction-sections -fdata-sections
 TGT_CFLAGS += -Wextra -Wshadow -Wno-unused-variable -Wimplicit-function-declaration
 TGT_CFLAGS += -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes
 # build rtos with different optimization flags since we don't want to debug it
-RTOS_CFLAGS += $(TGT_CFLAGS) $(RTOS_OPT)
-TGT_CFLAGS += $(OPT) -ggdb3
+RTOS_CFLAGS = $(filter-out $(OPT), $(TGT_CFLAGS))
+RTOS_CFLAGS += $(RTOS_OPT)
 
 TGT_CXXFLAGS += $(OPT) $(CXXSTD) -ggdb3
 TGT_CXXFLAGS += $(ARCH_FLAGS)
@@ -144,29 +144,26 @@ endif
 
 # build the rtos libary object and dependency files .o .d
 $(RTOS_BINDIR)/%.o: $(RTOS_SRCDIR)/%.c
-#$(RTOS_OBJS): $(RTOS_SRCS)
-
+#	@echo "\nARCH_FLAGS:\n" $(ARCH_FLAGS) "\n"
+#	@echo "\nTGT_CFLAGS:\n" $(TGT_CFLAGS) "\n"
+#	@echo "\nRTOS_CFLAGS:\n" $(RTOS_CFLAGS) "\n"	
 	@printf "  CC\t$<\n"
-	#@mkdir -p $(dir $@)
-	$(Q)$(CC) $(TGT_CFLAGS) $(CFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
+	$(Q)$(CC) $(RTOS_CFLAGS) $(CFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 # build the rtos library archive .a
-#$(RTOS_LIBDIR)/$(RTOS_NAME).a : $(RTOS_OBJS)
 $(RTOS_LIB) : $(RTOS_OBJS)
-	@echo "\nLIBDEPS:\n" $(LIBDEPS) "\n"
-	@echo "\nLDLIBS:\n" $(LDLIBS) "\n"
-	@echo "\nRTOS_SRCS:\n" $(RTOS_SRCS) "\n"
-	@echo "\nRTOS_CFLAGS:\n" $(RTOS_CFLAGS) "\n"	
-	@echo "\nCFLAGS:\n" $(CFLAGS) "\n"
-	@echo "\nLDFLAGS:\n" $(LDFLAGS) "\n"
-
+#	@echo "\nLIBDEPS:\n" $(LIBDEPS) "\n"
+#	@echo "\nLDLIBS:\n" $(LDLIBS) "\n"
+#	@echo "\nRTOS_SRCS:\n" $(RTOS_SRCS) "\n"
+#	@echo "\nRTOS_CFLAGS:\n" $(RTOS_CFLAGS) "\n"	
+#	@echo "\nCFLAGS:\n" $(CFLAGS) "\n"
+#	@echo "\nLDFLAGS:\n" $(LDFLAGS) "\n"
+	@printf "  AR\t$(RTOS_LIB)\n"
 	$(AR) $(RTOS_ARFLAGS) $(RTOS_LIB) $(RTOS_OBJS)
 
 # Need a special rule to have a bin dir
 $(BUILD_DIR)/%.o: %.c
-	@echo "\nCFLAGS:\n" $(CFLAGS) "\n"	
 	@printf "  CC\t$<\n"
-	@echo "---------------------------\n"	
 	@mkdir -p $(dir $@)
 	$(Q)$(CC) $(TGT_CFLAGS) $(CFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
@@ -181,13 +178,12 @@ $(BUILD_DIR)/%.o: %.S
 	$(Q)$(CC) $(TGT_ASFLAGS) $(ASFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
 $(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
-	@echo "PROJECT.elf: " $(LIBDEPS)
 	@printf "  LD\t$@\n"
 	$(Q)$(LD) $(TGT_LDFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
 %.bin: %.elf
 	@printf "  OBJCOPY\t$@\n"
-	$(Q)$(OBJCOPY) -O binary  $< $@
+	$(Q)$(OBJCOPY) -O binary $< $@
 
 %.lss: %.elf
 	$(OBJDUMP) -h -S $< > $@
@@ -197,6 +193,10 @@ $(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
 
 %.flash: %.elf
 	@printf "  FLASH\t$<\n"
+
+printsize: %.bin
+	$(shell ls)
+
 ifeq (,$(OOCD_FILE))
 	$(Q)(echo "halt; program $(realpath $(*).elf) verify reset" | nc -4 localhost 4444 2>/dev/null) || \
 		$(OOCD) -f interface/$(OOCD_INTERFACE).cfg \
@@ -211,8 +211,6 @@ else
 endif
 
 clean:
-	echo $(BUILD_DIR)
-	
 	rm -rf $(BUILD_DIR) $(GENERATED_BINS) 
 
 .PHONY: all clean flash

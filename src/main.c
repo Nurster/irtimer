@@ -443,14 +443,14 @@ void tim3_isr(void) {
 		//setVericalScrollingStartAddress(timer_get_counter(TIMER));
 	}
 }
-
+/*
 void vApplicationStackOverflowHook(
 	TaskHandle_t xTask __attribute__((unused)),
     char *pcTaskName __attribute__((unused))) {
 
 	while(1);
 }
-
+*/
 void taskTwo(void *pvParameters __attribute__((unused))) {
 	printf("Hello World!");
 	while (2) {
@@ -465,8 +465,7 @@ void demoTask(void *pvParameters __attribute__((unused))) {
 	}
 }
 
-int main(void)
-{
+int main(void) {
 
 	volatile BaseType_t createResult;
 
@@ -474,11 +473,13 @@ int main(void)
 	setupGpio();
 	setupSpi();
     /*setupSysTick();*/
-	createResult = xTaskCreate(demoTask, "Demo", 200, NULL, 0, &demoHandle);
-	createResult = xTaskCreate(taskTwo, "Two", 200, NULL, 0, &taskTwoHandle);
+	createResult = xTaskCreate(demoTask, "Demo", 200, NULL, 1, &demoHandle);
+	createResult = xTaskCreate(taskTwo, "Two", 200, NULL, 2, &taskTwoHandle);
+
+	/* printf("createResult: %d", (uint8_t)createResult);*/
 
 	/*demoDisplay();*/
-    /*setupTimer();*/
+    setupTimer();
 	/*NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );*/
 	vTaskStartScheduler();
 

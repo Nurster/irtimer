@@ -2,7 +2,7 @@ PROJECT = ili9163
 BUILD_DIR = ./bin
 
 RTOS_NAME = freertos
-RTOS_DIR = ./$(RTOS_NAME)
+RTOS_DIR = $(RTOS_NAME)
 RTOS_SRCDIR = $(RTOS_DIR)/src
 RTOS_INCDIR = $(RTOS_DIR)/include
 RTOS_BINDIR = $(RTOS_DIR)/bin
@@ -17,8 +17,8 @@ RTOS_OBJS = $(patsubst $(RTOS_SRCDIR)/%.c, $(RTOS_BINDIR)/%.o, $(wildcard $(RTOS
 #RTOS_OBJS = $(patsubst $(RTOS_DIR)/%.c, $(RTOS_BUILD_DIR)/%.o, $(RTOS_CFILES))
 #RTOS_OBJS = $(patsubst %.c, %.o, $(RTOS_CFILES))
 
-SHARED_DIR += ./src
-SHARED_DIR += ./include
+SHARED_DIR += src
+SHARED_DIR += include
 CFILES = main.c
 #CFILES += %.c
 #CFILES += api.c
