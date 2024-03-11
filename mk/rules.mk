@@ -194,8 +194,13 @@ $(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
 %.flash: %.elf
 	@printf "  FLASH\t$<\n"
 
-printsize: %.bin
-	$(shell ls)
+printsize: $(PROJECT).bin
+	@printf "\n"
+	@size -G -d $<
+	@printf "\n\t"
+	@du -b *.bin
+	@printf "\n"
+
 
 ifeq (,$(OOCD_FILE))
 	$(Q)(echo "halt; program $(realpath $(*).elf) verify reset" | nc -4 localhost 4444 2>/dev/null) || \

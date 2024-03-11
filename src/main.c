@@ -20,18 +20,17 @@
  */
 
 //#include <stdint.h>
-#include "FreeRTOS.h"
-#include "task.h"
-#include <libopencm3/cm3/nvic.h>
+#include <FreeRTOS.h>
+#include <task.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/timer.h>
-#include <libopencm3/cm3/systick.h>
-#include "test/test.c"
-#include <math.h>
+#include <libopencm3/cm3/nvic.h>
 #include <stdio.h>
 #include "main.h"
+
+#include "include/uitask.h"
 
 TaskHandle_t demoHandle;
 TaskHandle_t taskTwoHandle;
@@ -358,7 +357,7 @@ void demoDisplay(void){
 	uint8_t test = 0xff;
 	uint8_t *p_test = &test;
 
-	printf ("Test is %d at address %p", *p_test, p_test);
+	/*printf ("Test is %d at address %p", *p_test, p_test);*/
 
 
 	beginTransmissionSpi();
@@ -452,7 +451,7 @@ void vApplicationStackOverflowHook(
 }
 */
 void taskTwo(void *pvParameters __attribute__((unused))) {
-	printf("Hello World!");
+	/*printf("Hello World!");*/
 	while (2) {
 
 	}
@@ -473,8 +472,8 @@ int main(void) {
 	setupGpio();
 	setupSpi();
     /*setupSysTick();*/
-	createResult = xTaskCreate(demoTask, "Demo", 200, NULL, 1, &demoHandle);
-	createResult = xTaskCreate(taskTwo, "Two", 200, NULL, 2, &taskTwoHandle);
+	createResult = xTaskCreate(demoTask, "Demo", 200, NULL, 0, &demoHandle);
+	createResult = xTaskCreate(taskTwo, "Two", 200, NULL, 0, &taskTwoHandle);
 
 	/* printf("createResult: %d", (uint8_t)createResult);*/
 
