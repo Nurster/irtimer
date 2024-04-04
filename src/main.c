@@ -35,7 +35,7 @@ TaskHandle_t demoHandle;
 TaskHandle_t taskTwoHandle;
 
 static irCapture_t irCaptures[IR_MAX_EDGES];
-static irCapture_t *p_irCapture;
+static uint8_t irCaptureCounter = 0;
 
 static void setupClock(void) {
     rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
@@ -47,9 +47,8 @@ static void setupClock(void) {
 static void setupTimer(void) {
 
 	memset(&irCaptures,0, sizeof(irCapture_t));
-	p_irCapture = &irCaptures[0];
-
 	nvic_enable_irq(NVIC_TIM3_IRQ);
+	/*nvic_set_priority(NVIC_TIM3_IRQ, 128);*/
 	rcc_periph_reset_pulse(RST_TIM3);
 	timer_set_mode(
 	  IR_TIMER,
@@ -61,7 +60,7 @@ static void setupTimer(void) {
   /* count microseconds */
   timer_set_prescaler(IR_TIMER, ((rcc_apb2_frequency) / 1000000));
   /*
-   * either continuous or one shot mode does not make a difference,
+   * either continuous or one sho8934t mode does not make a difference,
    * since the timer is switched on and of in the ISR
    */
   timer_continuous_mode(IR_TIMER);
@@ -91,7 +90,6 @@ static void setupTimer(void) {
 
 }
 
-
 static void setupGpio(void) {
   gpio_set_mode(
       GPIO_BANK_TIM3_CH3,
@@ -103,54 +101,56 @@ static void setupGpio(void) {
 
 void tim3_isr(void) {
 
-	/* continue from beginning of array if end is reached */
-	if (p_irCapture == &irCaptures[IR_MAX_EDGES - 1]) {
-		p_irCapture = &irCaptures[0];
-	}
+	/*
+	 * don't proceed any further if max amount of edges is reached
+	 * instead generate an update event to end the capture cycle
+	 */
+	/*
+	if (irCaptureCounter == IR_MAX_EDGES) {
+		irCaptureCounter = 0;
+	}*/
 
-	/* TIM_SR_CC3 is set to latch on rising edges */
-	if ((TIM_SR(IR_TIMER) & TIM_SR_CC3IF)) {
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
-		/* store time passed since last latch */
-
-		p_irCapture->field.edgeType = IR_EDGE_RISING;
-		p_irCapture->field.nanoseconds = TIM_CCR3(IR_TIMER);
-		p_irCapture ++;
-		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-		TIM_CNT(IR_TIMER) = 0x0;
-
-
-	}
-
-	/* TIM_SR_CC3 is set to latch on falling edges */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
-
-		p_irCapture->field.edgeType = IR_EDGE_FALLING;
-		p_irCapture->field.nanoseconds = TIM_CCR4(IR_TIMER);
-		p_irCapture ++;
-		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-		TIM_CNT(IR_TIMER) = 0x0;
-
-	}
-
-	if (TIM_SR(IR_TIMER) & TIM_SR_UIF) {
+	if ((TIM_SR(IR_TIMER) & TIM_SR_UIF) && (irCaptureCounter == IR_MAX_EDGES)) {
 
 		/*
-		 * timer overflowed due to no keypress
-		 * disable timer to arm for next input capture sequence
-		 * set pointer to beginning of capture array
+		 * either maximum edges got captured
+		 * or timer overflowed if no more edges arrived within timer period
+		 *
+		 * disable timer to arm for next input capture sequence and
 		 */
 		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
-
-		p_irCapture = &irCaptures[0];
+		/* reset pointer to beginning of capture array */
+		irCaptureCounter = 0;
 		TIM_CNT(IR_TIMER) = 0x0;
 		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
+	} else {
+
+	/* TIM_SR_CC3 is set to latch on rising edges */
+		if ((TIM_SR(IR_TIMER) & TIM_SR_CC3IF)) {
+			TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
+			/* store time passed since last latch */
+			irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_RISING;
+			irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR3(IR_TIMER);
+			/* shift pointer one step further to next empty slot and prepare for next capture */
+			irCaptureCounter ++;
+			/* start timer to run until next latch */
+			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
+			TIM_CNT(IR_TIMER) = 0x0;
+		}
+
+		/* TIM_SR_CC3 is set to latch on falling edges */
+		if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
+			TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
+			irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_FALLING;
+			irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR4(IR_TIMER);
+			irCaptureCounter ++;
+			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
+			TIM_CNT(IR_TIMER) = 0x0;
+
+		}
 	}
-
-	/* TIM_CNT(IR_TIMER) = 0x0; */
-
 }
+
 
 void taskTwo(void *pvParameters __attribute__((unused))) {
 	/*printf("Hello World!");*/
