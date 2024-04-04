@@ -56,6 +56,16 @@ OOCD	?= openocd
 
 OPENCM3_INC = $(OPENCM3_DIR)/include
 
+RTOS_NAME = freertos
+RTOS_DIR = $(RTOS_NAME)
+RTOS_SRCDIR = $(RTOS_DIR)/src
+RTOS_INCDIR = $(RTOS_DIR)/include
+RTOS_BINDIR = $(RTOS_DIR)/bin
+RTOS_LIBDIR = $(RTOS_DIR)/lib
+RTOS_LIB = $(RTOS_LIBDIR)/lib$(RTOS_NAME).a
+RTOS_SRCS = $(wildcard $(RTOS_SRCDIR)/*.c)
+RTOS_OBJS = $(patsubst $(RTOS_SRCDIR)/%.c, $(RTOS_BINDIR)/%.o, $(wildcard $(RTOS_SRCDIR)/*.c))
+
 # Inclusion of library header files
 INCLUDES += $(patsubst %,-I%, . $(OPENCM3_INC) )
 INCLUDES += $(patsubst %,-I%, . $(RTOS_INCDIR) )
@@ -129,6 +139,12 @@ LDLIBS += -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 %: SCCS/s.%
 
 all: $(PROJECT).elf $(PROJECT).bin
+	@printf "\n"
+	@size -G -d $<
+	@printf "\n\t"
+	@du -b *.bin
+	@printf "\n"
+
 flash: $(PROJECT).flash
 
 # error if not using linker script generator
@@ -177,7 +193,7 @@ $(BUILD_DIR)/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(Q)$(CC) $(TGT_ASFLAGS) $(ASFLAGS) $(TGT_CPPFLAGS) $(CPPFLAGS) -o $@ -c $<
 
-$(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
+$(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS) 
 	@printf "  LD\t$@\n"
 	$(Q)$(LD) $(TGT_LDFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
@@ -193,14 +209,6 @@ $(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
 
 %.flash: %.elf
 	@printf "  FLASH\t$<\n"
-
-printsize: $(PROJECT).bin
-	@printf "\n"
-	@size -G -d $<
-	@printf "\n\t"
-	@du -b *.bin
-	@printf "\n"
-
 
 ifeq (,$(OOCD_FILE))
 	$(Q)(echo "halt; program $(realpath $(*).elf) verify reset" | nc -4 localhost 4444 2>/dev/null) || \
@@ -218,6 +226,6 @@ endif
 clean:
 	rm -rf $(BUILD_DIR) $(GENERATED_BINS) 
 
-.PHONY: all clean flash
+.PHONY: all clean flash printsize
 -include $(OBJS:.o=.d)
 
