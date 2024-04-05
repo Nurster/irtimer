@@ -80,13 +80,18 @@ static void setupTimer(void) {
 	  | TIM_CCER_CC4P
 	  ;
 
+  /* update registers before enabling interupts to prevent false trigger */
+  TIM_EGR(IR_TIMER) |= TIM_EGR_UG;
+  TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
+
+ /* finally enable irqs to arm timer for capturing */
   TIM_DIER(IR_TIMER)
   	  |= TIM_DIER_UIE
 	  | TIM_DIER_CC3IE
 	  | TIM_DIER_CC4IE
 	  ;
 
-  TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
+  /*TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;*/
 
 }
 
@@ -105,49 +110,60 @@ void tim3_isr(void) {
 	 * don't proceed any further if max amount of edges is reached
 	 * instead generate an update event to end the capture cycle
 	 */
+
 	/*
 	if (irCaptureCounter == IR_MAX_EDGES) {
+		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
+		TIM_CNT(IR_TIMER) = 0x0;
 		irCaptureCounter = 0;
-	}*/
 
-	if ((TIM_SR(IR_TIMER) & TIM_SR_UIF) && (irCaptureCounter == IR_MAX_EDGES)) {
+	}
+	*/
 
+	if (TIM_SR(IR_TIMER) & TIM_SR_UIF) {
 		/*
 		 * either maximum edges got captured
 		 * or timer overflowed if no more edges arrived within timer period
 		 *
 		 * disable timer to arm for next input capture sequence and
 		 */
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
 		/* reset pointer to beginning of capture array */
-		irCaptureCounter = 0;
-		TIM_CNT(IR_TIMER) = 0x0;
 		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-	} else {
+		TIM_CNT(IR_TIMER) = 0x0;
+		irCaptureCounter = 0;
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
+	}
 
-	/* TIM_SR_CC3 is set to latch on rising edges */
+	if (irCaptureCounter == IR_MAX_EDGES) {
+		irCaptureCounter = 0;
+		/* max out the counter register in order to provoke generation of UIF due to overflow */
+		TIM_CNT(IR_TIMER) = 0xffff;
+	} else {
+		/* TIM_SR_CC3 is set to latch on rising edges */
 		if ((TIM_SR(IR_TIMER) & TIM_SR_CC3IF)) {
+			TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
 			TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
 			/* store time passed since last latch */
 			irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_RISING;
 			irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR3(IR_TIMER);
-			/* shift pointer one step further to next empty slot and prepare for next capture */
 			irCaptureCounter ++;
-			/* start timer to run until next latch */
-			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 			TIM_CNT(IR_TIMER) = 0x0;
+			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 		}
 
 		/* TIM_SR_CC3 is set to latch on falling edges */
 		if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
+			TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
 			TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
 			irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_FALLING;
 			irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR4(IR_TIMER);
 			irCaptureCounter ++;
-			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 			TIM_CNT(IR_TIMER) = 0x0;
-
+			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 		}
+	}
+	if (TIM_SR(IR_TIMER) & (TIM_SR_CC3OF | TIM_SR_CC4OF)) {
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3OF | TIM_SR_CC4OF);
 	}
 }
 
