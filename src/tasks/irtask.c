@@ -6,12 +6,14 @@
 #include "libopencm3/stm32/gpio.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/cm3/nvic.h>
-#include "tasks/uitask.h"
+#include "tasks/irtask.h"
 
-TaskHandle_t g_uiTaskHandle = NULL;
+TaskHandle_t g_irTaskHandle = NULL;
 
-void uiTask(void *pvParameters __attribute__((unused))) {
-	while (2) {
+void irTask(void *pvParameters __attribute__((unused))) {
+	/*printf("Hello World!");*/
+	while (1) {
 	    vTaskDelay(pdMS_TO_TICKS(20));
+
 	}
 }

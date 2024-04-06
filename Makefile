@@ -1,10 +1,14 @@
 PROJECT = irtimer
 BUILD_DIR = ./bin
+SRC_DIR = ./src
+INC_DIR= ./include
 
+#SHARED_DIR += src
+#SHARED_DIR += include
 
-SHARED_DIR += src
-SHARED_DIR += include
-CFILES = main.c
+CFILES = $(shell find $(SRC_DIR)/ -type f -name *.c)
+HFILES = $(shell find $(INC_DIR)/ -type f -name *.h)
+INCLUDES += $(patsubst %,-I%, $(INC_DIR))
 #CFILES += %.c
 #CFILES += api.c
 #AFILES += api-asm.S
@@ -18,8 +22,10 @@ DEVICE=stm32f103cbt6
 OOCD_FILE = board/stm32f103c8_blue_pill.cfg
 
 # You shouldn't have to edit anything below here.
-VPATH += $(SHARED_DIR)
-INCLUDES += $(patsubst %,-I%, $(SHARED_DIR))
+#VPATH += $(SHARED_DIR)
+#INCLUDES += $(patsubst %,-I%, $(SHARED_DIR))
+
+
 OPENCM3_DIR=./libopencm3
 
 include $(OPENCM3_DIR)/mk/genlink-config.mk

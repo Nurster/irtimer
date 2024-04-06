@@ -19,20 +19,19 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <libopencm3/stm32/rcc.h>
 #include "libopencm3/stm32/gpio.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/cm3/nvic.h>
+#include "include/globals.h"
 #include "main.h"
-#include "include/uitask.h"
-
-TaskHandle_t demoHandle;
-TaskHandle_t taskTwoHandle;
+#include "tasks/uitask.h"
+#include "tasks/irtask.h"
 
 static irCapture_t irCaptures[IR_MAX_EDGES];
 static uint8_t irCaptureCounter = 0;
@@ -105,22 +104,7 @@ static void setupGpio(void) {
 }
 
 void tim3_isr(void) {
-
-	/*
-	 * don't proceed any further if max amount of edges is reached
-	 * instead generate an update event to end the capture cycle
-	 */
-
-	/*
-	if (irCaptureCounter == IR_MAX_EDGES) {
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_CNT(IR_TIMER) = 0x0;
-		irCaptureCounter = 0;
-
-	}
-	*/
-
-	if (TIM_SR(IR_TIMER) & TIM_SR_UIF) {
+	if ((TIM_SR(IR_TIMER) & TIM_SR_UIF) || (irCaptureCounter == IR_MAX_EDGES)) {
 		/*
 		 * either maximum edges got captured
 		 * or timer overflowed if no more edges arrived within timer period
@@ -134,51 +118,31 @@ void tim3_isr(void) {
 		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
 	}
 
-	if (irCaptureCounter == IR_MAX_EDGES) {
-		irCaptureCounter = 0;
-		/* max out the counter register in order to provoke generation of UIF due to overflow */
-		TIM_CNT(IR_TIMER) = 0xffff;
-	} else {
-		/* TIM_SR_CC3 is set to latch on rising edges */
-		if ((TIM_SR(IR_TIMER) & TIM_SR_CC3IF)) {
-			TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-			TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
-			/* store time passed since last latch */
-			irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_RISING;
-			irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR3(IR_TIMER);
-			irCaptureCounter ++;
-			TIM_CNT(IR_TIMER) = 0x0;
-			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-		}
-
-		/* TIM_SR_CC3 is set to latch on falling edges */
-		if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
-			TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-			TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
-			irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_FALLING;
-			irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR4(IR_TIMER);
-			irCaptureCounter ++;
-			TIM_CNT(IR_TIMER) = 0x0;
-			TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-		}
+	/* TIM_SR_CC3 is set to latch on rising edges */
+	if (TIM_SR(IR_TIMER) & TIM_SR_CC3IF) {
+		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
+		/* store time passed since last latch */
+		irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_RISING;
+		irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR3(IR_TIMER);
+		irCaptureCounter ++;
+		TIM_CNT(IR_TIMER) = 0x0;
+		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 	}
+
+	/* TIM_SR_CC3 is set to latch on falling edges */
+	if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
+		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
+		irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_FALLING;
+		irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR4(IR_TIMER);
+		irCaptureCounter ++;
+		TIM_CNT(IR_TIMER) = 0x0;
+		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
+	}
+
 	if (TIM_SR(IR_TIMER) & (TIM_SR_CC3OF | TIM_SR_CC4OF)) {
 		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3OF | TIM_SR_CC4OF);
-	}
-}
-
-
-void taskTwo(void *pvParameters __attribute__((unused))) {
-	/*printf("Hello World!");*/
-	while (2) {
-	    vTaskDelay(pdMS_TO_TICKS(20));
-
-	}
-}
-
-void demoTask(void *pvParameters __attribute__((unused))) {
-	while (2) {
-	    vTaskDelay(pdMS_TO_TICKS(20));
 	}
 }
 
@@ -188,8 +152,8 @@ int main(void) {
 
 	setupClock();
 	setupGpio();
-	createResult = xTaskCreate(demoTask, "Demo", 200, NULL, 0, &demoHandle);
-	createResult = xTaskCreate(taskTwo, "Two", 200, NULL, 0, &taskTwoHandle);
+	createResult = xTaskCreate(uiTask, "Demo", 200, NULL, 0, &g_uiTaskHandle);
+	createResult = xTaskCreate(irTask, "Two", 200, NULL, 0, &g_irTaskHandle);
 	setupTimer();
 	vTaskStartScheduler();
 

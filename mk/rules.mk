@@ -34,7 +34,7 @@
 BUILD_DIR ?= bin
 OPT ?= -Og
 RTOS_OPT ?= -Og
-CSTD ?= -std=c99
+CSTD ?= -std=c11
 
 # Be silent per default, but 'make V=1' will show all compiler calls.
 # If you're insane, V=99 will print out all sorts of things.
@@ -52,7 +52,7 @@ LD	= $(PREFIX)gcc
 AR	= $(PREFIX)ar
 OBJCOPY	= $(PREFIX)objcopy
 OBJDUMP	= $(PREFIX)objdump
-OOCD	?= openocd
+OOCD ?= openocd
 
 OPENCM3_INC = $(OPENCM3_DIR)/include
 

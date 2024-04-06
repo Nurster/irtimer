@@ -1,9 +1,10 @@
 #pragma once
 
 #define IR_TIMER TIM3
-#define IR_MAX_EDGES 72
+#define IR_MAX_EDGES 96
 #define IR_EDGE_RISING 0
 #define IR_EDGE_FALLING 1
+#define IR_SIGNAL_PAUSE_NS 20 * 1000
 
 typedef union {
 	uint16_t capture;
@@ -13,5 +14,4 @@ typedef union {
 	} field;
 } irCapture_t;
 
-void demoTask(void *pvParameters __attribute__((unused)));
-void taskTwo(void *pvParameters __attribute__((unused)));
+

@@ -1,1 +1,3 @@
-void demofunction(uint8_t *p_int);
+#pragma once
+
+void uiTask(void *pvParameters __attribute__((unused)));
