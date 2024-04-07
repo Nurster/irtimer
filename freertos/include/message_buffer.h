@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel <DEVELOPMENT BRANCH>
- * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * FreeRTOS Kernel V10.6.2
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  *
@@ -795,7 +795,7 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * \ingroup MessageBufferManagement
  */
 #define xMessageBufferNextLengthBytes( xMessageBuffer ) \
-    xStreamBufferNextMessageLengthBytes( xMessageBuffer )
+    xStreamBufferNextMessageLengthBytes( xMessageBuffer ) PRIVILEGED_FUNCTION;
 
 /**
  * message_buffer.h

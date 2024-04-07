@@ -103,49 +103,6 @@ static void setupGpio(void) {
       );
 }
 
-void tim3_isr(void) {
-	if ((TIM_SR(IR_TIMER) & TIM_SR_UIF) || (irCaptureCounter == IR_MAX_EDGES)) {
-		/*
-		 * either maximum edges got captured
-		 * or timer overflowed if no more edges arrived within timer period
-		 *
-		 * disable timer to arm for next input capture sequence and
-		 */
-		/* reset pointer to beginning of capture array */
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_CNT(IR_TIMER) = 0x0;
-		irCaptureCounter = 0;
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
-	}
-
-	/* TIM_SR_CC3 is set to latch on rising edges */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC3IF) {
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
-		/* store time passed since last latch */
-		irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_RISING;
-		irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR3(IR_TIMER);
-		irCaptureCounter ++;
-		TIM_CNT(IR_TIMER) = 0x0;
-		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-	}
-
-	/* TIM_SR_CC3 is set to latch on falling edges */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
-		irCaptures[irCaptureCounter].field.edgeType = IR_EDGE_FALLING;
-		irCaptures[irCaptureCounter].field.nanoSeconds = TIM_CCR4(IR_TIMER);
-		irCaptureCounter ++;
-		TIM_CNT(IR_TIMER) = 0x0;
-		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-	}
-
-	if (TIM_SR(IR_TIMER) & (TIM_SR_CC3OF | TIM_SR_CC4OF)) {
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3OF | TIM_SR_CC4OF);
-	}
-}
-
 int main(void) {
 
 	volatile BaseType_t createResult;

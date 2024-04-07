@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel <DEVELOPMENT BRANCH>
- * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * FreeRTOS Kernel V10.6.2
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  *
@@ -151,7 +151,7 @@ struct xLIST_ITEM
     struct xLIST * configLIST_VOLATILE pxContainer;     /**< Pointer to the list in which this list item is placed (if any). */
     listSECOND_LIST_ITEM_INTEGRITY_CHECK_VALUE          /**< Set to a known value if configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES is set to 1. */
 };
-typedef struct xLIST_ITEM ListItem_t;
+typedef struct xLIST_ITEM ListItem_t;                   /* For some reason lint wants this as two separate definitions. */
 
 #if ( configUSE_MINI_LIST_ITEM == 1 )
     struct xMINI_LIST_ITEM
@@ -326,7 +326,7 @@ typedef struct xLIST
         }                                                                        \
                                                                                  \
         ( pxItemToRemove )->pxContainer = NULL;                                  \
-        ( ( pxList )->uxNumberOfItems ) -= ( UBaseType_t ) 1U;                   \
+        ( pxList->uxNumberOfItems )--;                                           \
     } while( 0 )
 
 /*
@@ -363,17 +363,17 @@ typedef struct xLIST
                                                                                 \
         /* Insert a new list item into ( pxList ), but rather than sort the list, \
          * makes the new list item the last item to be removed by a call to \
-         * listGET_OWNER_OF_NEXT_ENTRY(). */                   \
-        ( pxNewListItem )->pxNext = pxIndex;                   \
-        ( pxNewListItem )->pxPrevious = pxIndex->pxPrevious;   \
-                                                               \
-        pxIndex->pxPrevious->pxNext = ( pxNewListItem );       \
-        pxIndex->pxPrevious = ( pxNewListItem );               \
-                                                               \
-        /* Remember which list the item is in. */              \
-        ( pxNewListItem )->pxContainer = ( pxList );           \
-                                                               \
-        ( ( pxList )->uxNumberOfItems ) += ( UBaseType_t ) 1U; \
+         * listGET_OWNER_OF_NEXT_ENTRY(). */                 \
+        ( pxNewListItem )->pxNext = pxIndex;                 \
+        ( pxNewListItem )->pxPrevious = pxIndex->pxPrevious; \
+                                                             \
+        pxIndex->pxPrevious->pxNext = ( pxNewListItem );     \
+        pxIndex->pxPrevious = ( pxNewListItem );             \
+                                                             \
+        /* Remember which list the item is in. */            \
+        ( pxNewListItem )->pxContainer = ( pxList );         \
+                                                             \
+        ( ( pxList )->uxNumberOfItems )++;                   \
     } while( 0 )
 
 /*

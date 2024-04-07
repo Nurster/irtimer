@@ -13,7 +13,8 @@ TaskHandle_t g_irTaskHandle = NULL;
 void irTask(void *pvParameters __attribute__((unused))) {
 	/*printf("Hello World!");*/
 	while (1) {
-	    vTaskDelay(pdMS_TO_TICKS(20));
-
+		if (xTaskNotifyWait(0,0,NULL,portMAX_DELAY) == pdPASS) {
+		    vTaskDelay(pdMS_TO_TICKS(1000));
+		}
 	}
 }
