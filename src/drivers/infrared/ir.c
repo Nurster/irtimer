@@ -10,14 +10,8 @@
 #include "drivers/infrared/ir.h"
 #include "tasks/irtask.h"
 
-static irCapture_t irCapture;
-static uint8_t irCaptureCounter = 0;
-
 void setupInfrared(void) {
-	memset(&irCapture,0, sizeof(irCapture_t));
-
 	nvic_enable_irq(NVIC_TIM3_IRQ);
-	/*nvic_set_priority(NVIC_TIM3_IRQ, 128);*/
 	rcc_periph_reset_pulse(RST_TIM3);
 	timer_set_mode(
 	  IR_TIMER,
@@ -59,51 +53,4 @@ void setupInfrared(void) {
 	  | TIM_DIER_CC3IE
 	  | TIM_DIER_CC4IE
 	  ;
-}
-
-void tim3_isr(void) {
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	if ((TIM_SR(IR_TIMER) & TIM_SR_UIF) || (irCaptureCounter == IR_MAX_EDGES)) {
-		/*
-		 * either maximum edges got captured
-		 * or timer overflowed if no more edges arrived within timer period
-		 *
-		 * disable timer to arm for next input capture sequence and
-		 */
-		/* reset pointer to beginning of capture array */
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_CNT(IR_TIMER) = 0x0;
-		irCaptureCounter = 0;
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
-		irCapture.irTimeStamp = xTaskGetTickCountFromISR();
-		xTaskNotifyFromISR(g_irTaskHandle, irCapture.irTimeStamp, eSetValueWithoutOverwrite, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	/* TIM_SR_CC3 is set to latch on rising edges */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC3IF) {
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
-		/* store time passed since last latch */
-		irCapture.irEdges[irCaptureCounter].edgeType = IR_EDGE_RISING;
-		irCapture.irEdges[irCaptureCounter].nanoSeconds = TIM_CCR3(IR_TIMER);
-		irCaptureCounter ++;
-		TIM_CNT(IR_TIMER) = 0x0;
-		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-	}
-
-	/* TIM_SR_CC3 is set to latch on falling edges */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
-		irCapture.irEdges[irCaptureCounter].edgeType = IR_EDGE_FALLING;
-		irCapture.irEdges[irCaptureCounter].nanoSeconds = TIM_CCR4(IR_TIMER);
-		irCaptureCounter ++;
-		TIM_CNT(IR_TIMER) = 0x0;
-		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
-	}
-
-	if (TIM_SR(IR_TIMER) & (TIM_SR_CC3OF | TIM_SR_CC4OF)) {
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3OF | TIM_SR_CC4OF);
-	}
 }

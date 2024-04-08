@@ -33,65 +33,12 @@
 #include "tasks/uitask.h"
 #include "tasks/irtask.h"
 
-static irCapture_t irCaptures[IR_MAX_EDGES];
-static uint8_t irCaptureCounter = 0;
 
 static void setupClock(void) {
     rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
     rcc_periph_clock_enable(RCC_GPIOA);
     rcc_periph_clock_enable(RCC_GPIOB);
     rcc_periph_clock_enable(RCC_TIM3);
-}
-
-static void setupTimer(void) {
-
-	memset(&irCaptures,0, sizeof(irCapture_t));
-	nvic_enable_irq(NVIC_TIM3_IRQ);
-	/*nvic_set_priority(NVIC_TIM3_IRQ, 128);*/
-	rcc_periph_reset_pulse(RST_TIM3);
-	timer_set_mode(
-	  IR_TIMER,
-	  TIM_CR1_CKD_CK_INT,
-	  TIM_CR1_CMS_EDGE,
-	  TIM_CR1_DIR_UP
-  );
-
-  /* count microseconds */
-  timer_set_prescaler(IR_TIMER, ((rcc_apb2_frequency) / 1000000));
-  /*
-   * either continuous or one sho8934t mode does not make a difference,
-   * since the timer is switched on and of in the ISR
-   */
-  timer_continuous_mode(IR_TIMER);
-
-  TIM_CCMR2(IR_TIMER)
-  	  |= TIM_CCMR2_IC3F_CK_INT_N_8
-	  | TIM_CCMR2_IC4F_CK_INT_N_8
-	  | TIM_CCMR2_IC3PSC_OFF
-	  | TIM_CCMR2_IC4PSC_OFF
-	  | TIM_CCMR2_CC3S_IN_TI4
-	  | TIM_CCMR2_CC4S_IN_TI4
-	  ;
-
-  TIM_CCER(IR_TIMER)
-  	  |= TIM_CCER_CC3E
-	  | TIM_CCER_CC4E
-	  | TIM_CCER_CC4P
-	  ;
-
-  /* update registers before enabling interupts to prevent false trigger */
-  TIM_EGR(IR_TIMER) |= TIM_EGR_UG;
-  TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
-
- /* finally enable irqs to arm timer for capturing */
-  TIM_DIER(IR_TIMER)
-  	  |= TIM_DIER_UIE
-	  | TIM_DIER_CC3IE
-	  | TIM_DIER_CC4IE
-	  ;
-
-  /*TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;*/
-
 }
 
 static void setupGpio(void) {
@@ -109,9 +56,8 @@ int main(void) {
 
 	setupClock();
 	setupGpio();
-	createResult = xTaskCreate(uiTask, "Demo", 200, NULL, 0, &g_uiTaskHandle);
-	createResult = xTaskCreate(irTask, "Two", 200, NULL, 0, &g_irTaskHandle);
-	setupTimer();
+	createResult = xTaskCreate(uiTask, "Demo", 400, NULL, 0, &g_uiTaskHandle);
+	createResult = xTaskCreate(irTask, "Two", 400, NULL, 0, &g_irTaskHandle);
 	vTaskStartScheduler();
 
 	return 0;

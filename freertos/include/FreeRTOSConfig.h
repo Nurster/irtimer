@@ -66,7 +66,7 @@ to exclude the API function. */
 
 #define INCLUDE_vTaskPrioritySet		1
 #define INCLUDE_uxTaskPriorityGet		1
-#define INCLUDE_vTaskDelete				0
+#define INCLUDE_vTaskDelete				1
 #define INCLUDE_vTaskCleanUpResources	1
 #define INCLUDE_vTaskSuspend			1
 #define INCLUDE_vTaskDelayUntil			1
@@ -85,7 +85,8 @@ priority values, 0 to 15.  This must correspond to the
 configKERNEL_INTERRUPT_PRIORITY setting.  Here 15 corresponds to the lowest
 NVIC value of 255. */
 #define configLIBRARY_KERNEL_INTERRUPT_PRIORITY	15
-#define configUSEPORTOPTIMISEDTASKSELECTION		0
+/* #define configUSEPORTOPTIMISEDTASKSELECTION		0 */
+
 
 /* libopencm3 handler defines to match FreeRTOS standards */
 
