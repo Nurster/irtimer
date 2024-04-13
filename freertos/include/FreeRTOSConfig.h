@@ -39,6 +39,11 @@
  *
  * See http://www.freertos.org/a00110.html
  *----------------------------------------------------------*/
+ 
+/* MPU related */
+#define configSYSTEM_CALL_STACK_SIZE 200
+#define configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY 1
+#define configPROTECTED_KERNEL_OBJECT_POOL_SIZE 32
 
 #define configUSE_PREEMPTION		1
 #define configUSE_TIME_SLICING      1

@@ -25,11 +25,12 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <libopencm3/stm32/rcc.h>
-#include "libopencm3/stm32/gpio.h"
+#include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/cm3/nvic.h>
 #include "include/globals.h"
 #include "main.h"
+#include "drivers/serial/serial.h"
 #include "tasks/uitask.h"
 #include "tasks/irtask.h"
 
@@ -39,25 +40,17 @@ static void setupClock(void) {
     rcc_periph_clock_enable(RCC_GPIOA);
     rcc_periph_clock_enable(RCC_GPIOB);
     rcc_periph_clock_enable(RCC_TIM3);
-}
-
-static void setupGpio(void) {
-  gpio_set_mode(
-      GPIO_BANK_TIM3_CH3,
-      GPIO_MODE_INPUT,
-      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-      GPIO_TIM3_CH4
-      );
+    rcc_periph_clock_enable(RCC_USART1);
 }
 
 int main(void) {
 
 	volatile BaseType_t createResult;
-
 	setupClock();
-	setupGpio();
-	createResult = xTaskCreate(uiTask, "Demo", 400, NULL, 0, &g_uiTaskHandle);
-	createResult = xTaskCreate(irTask, "Two", 400, NULL, 0, &g_irTaskHandle);
+	setupSerial();
+	printStringSerial("Creating tasks...");
+	createResult = xTaskCreate(uiTask, "User Interface", 400, NULL, 0, &g_uiTaskHandle);
+	createResult = xTaskCreate(irTask, "Infrared Parser", 1200, NULL, 0, &g_irTaskHandle);
 	vTaskStartScheduler();
 
 	return 0;
