@@ -22,7 +22,7 @@ StreamBufferHandle_t irStreamBuffer;
 
 void irTask(void *pvParameters __attribute__((unused))) {
 /*	uint8_t debugCounter = 0; */
-	uint8_t keyCode = 0;
+	volatile uint32_t keyCode = 0;
 	char debugOut[128];
 	uint8_t queueMessagesWaiting = 0;
 	irQueueHandle = xQueueCreate(IR_QUEUE_LENGTH, sizeof(irCapture_t));
@@ -45,7 +45,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 				debugCounter = 0;
 			}
 */
-			necDecode(&irCaptureOut, &keyCode);
+			keyCode = necDecode(&irCaptureOut);
 		} else {
 
 /*

@@ -74,7 +74,7 @@ void setupInfrared(void) {
 	  | TIM_DIER_CC4IE;
 }
 
-bool irGenericCheckTimePassed \
+bool irGenericCheckEdgeTime \
 				(irCapture_t const* const p_capture, \
 				uint8_t pos, \
 				irEdgeType_t edgeType, \
