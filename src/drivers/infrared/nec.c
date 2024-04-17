@@ -9,6 +9,7 @@
 #include "globals.h"
 #include "drivers/infrared/ir.h"
 #include "drivers/infrared/nec.h"
+#include "drivers/serial/serial.h"
 #include "tasks/irtask.h"
 
 static uint8_t necFindSyncStart(irCapture_t const* const p_capture) {
@@ -53,10 +54,9 @@ static uint32_t necGetKeyCode(irCapture_t const* const p_capture, uint8_t start)
 			 */
 			continue;
 		}
-
 		/*
 		 * If we got here none of the edge timings matched
-		 * and the whole sequence is corrupted.
+		 * and the whole sequence may be corrupted.
 		 * Bail out and fill the keycode with the appropriate errorno.
 		 */
 		return NEC_IR_KEYCODE_SEQUENCE_ERROR;
@@ -66,6 +66,8 @@ static uint32_t necGetKeyCode(irCapture_t const* const p_capture, uint8_t start)
 	return keyCode;
 }
 
+
+
 uint32_t necDecode(irCapture_t const* const p_capture) {
 
 	if (p_capture == NULL) {
@@ -74,23 +76,23 @@ uint32_t necDecode(irCapture_t const* const p_capture) {
 	uint32_t keyCode = 0;
 	uint8_t pos = 0;
 
-	if (pos = necFindSyncStart(p_capture)) {
-		if (pos <= (IR_MAX_EDGES - NEC_IR_KEYCODE_NUM_EDGES)) {
-			if (necCheckSyncKeyCode(p_capture, pos + 1)
-					&& necCheckTail(p_capture, pos + 2)) {
-					/* advance to first data position to begin parsing of keycode */
-					pos += NEC_IR_KEYCODE_START_EDGE - 1;
-					keyCode = necGetKeyCode(p_capture, pos);
-					return keyCode;
-			}
-		}
-		if (necCheckSyncRepeat(p_capture, pos + 1)
+	pos = necFindSyncStart(p_capture);
+
+	if (pos <= (IR_MAX_EDGES - NEC_IR_KEYCODE_NUM_EDGES)) {
+		if (necCheckSyncKeyCode(p_capture, pos + 1)
 				&& necCheckTail(p_capture, pos + 2)) {
-				keyCode = NEC_IR_REPEATCODE;
-				printf("repeat");
+				/* advance to first data position to begin parsing of keycode */
+				pos += NEC_IR_KEYCODE_START_EDGE - 1;
+				keyCode = necGetKeyCode(p_capture, pos);
+				printStringSerial("key");
 				return keyCode;
 		}
 	}
-
+	if (necCheckSyncRepeat(p_capture, pos + 1)
+			&& necCheckTail(p_capture, pos + 2)) {
+			keyCode = NEC_IR_REPEATCODE;
+			printStringSerial("repeat");
+			return keyCode;
+	}
 	return 0;
 }
