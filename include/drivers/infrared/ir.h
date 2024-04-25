@@ -28,8 +28,8 @@ typedef struct {
 } irCapture_t;
 
 void setupInfrared(void);
-bool irGenericCheckEdgeTime \
-				(irCapture_t const* const p_capture, \
-				uint8_t pos, \
-				irEdgeType_t edgeType, \
+bool irGenericCheckEdgeTime
+				(irCapture_t const* const p_capture,
+				uint8_t pos,
+				irEdgeType_t edgeType,
 				uint16_t timeBase);

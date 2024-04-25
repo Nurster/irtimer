@@ -18,7 +18,7 @@ irCapture_t irCaptureIn;
 
 void irTask(void *pvParameters __attribute__((unused))) {
 /*	uint8_t debugCounter = 0; */
-/*	volatile necKeyCode_t necCode; */
+	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
 	TickType_t notifyTimeStamp = 0;
 	char debugOut[128];
@@ -30,6 +30,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 			 * necCode.necRaw = necDecode(&irCaptureIn);
 			 */
 			rc5Code.rc5Raw = rc5Decode(&irCaptureIn);
+			necCode.necRaw = necDecode(&irCaptureIn);
 			memset(&irCaptureIn, 0, sizeof(irCapture_t));
 		} else	{
 			printStringSerial("\r\nIR nothing to do...\r\n");

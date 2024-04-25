@@ -31,6 +31,7 @@
 #include "include/globals.h"
 #include "main.h"
 #include "drivers/serial/serial.h"
+#include "tasks/wdtask.h"
 #include "tasks/uitask.h"
 #include "tasks/irtask.h"
 
@@ -49,6 +50,7 @@ int main(void) {
 	setupClock();
 	setupSerial();
 	printStringSerial("Creating tasks...");
+	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 0, &g_wdTaskHandle);
 	createResult = xTaskCreate(uiTask, "User Interface", 400, NULL, 0, &g_uiTaskHandle);
 	createResult = xTaskCreate(irTask, "Infrared Parser", 1200, NULL, 0, &g_irTaskHandle);
 	vTaskStartScheduler();

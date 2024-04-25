@@ -74,10 +74,10 @@ void setupInfrared(void) {
 	  | TIM_DIER_CC4IE;
 }
 
-bool irGenericCheckEdgeTime \
-				(irCapture_t const* const p_capture, \
-				uint8_t pos, \
-				irEdgeType_t edgeType, \
+bool irGenericCheckEdgeTime
+				(irCapture_t const* const p_capture,
+				uint8_t pos,
+				irEdgeType_t edgeType,
 				uint16_t timeBase) {
 	if ((p_capture->irEdges[pos].irEdgeType == edgeType)
 			&& (p_capture->irEdges[pos].irMicroSeconds > (timeBase - IR_SYNC_MARGIN_US))

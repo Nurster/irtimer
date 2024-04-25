@@ -16,7 +16,7 @@
 #define NEC_IR_KEYCODE_LOGIC_ONE_US NEC_IR_KEYCODE_BASE_US * 3
 #define NEC_IR_KEYCODE_SEQUENCE_ERROR 0xffffffffUL
 
-#define NEC_IR_REPEATCODE 255
+#define NEC_IR_REPEATCODE 0xdeadbeefUL
 
 #define necCheckSyncStart(p_capture, pos) \
 	irGenericCheckEdgeTime((p_capture), (pos), IR_EDGE_RISING, NEC_IR_SYNC_BASE_US)
@@ -45,4 +45,4 @@ typedef union {
 	};
 } necKeyCode_t;
 
-uint32_t necDecode(irCapture_t const* const p_capture);
+uint32_t necDecode(const irCapture_t *const p_capture);

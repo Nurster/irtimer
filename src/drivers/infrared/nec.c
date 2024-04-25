@@ -12,7 +12,7 @@
 #include "drivers/serial/serial.h"
 #include "tasks/irtask.h"
 
-static uint8_t necFindSyncStart(irCapture_t const* const p_capture) {
+static uint8_t necFindSyncStart(const irCapture_t *const p_capture) {
 
 	if (p_capture == NULL) {
 		return 0;
@@ -30,14 +30,15 @@ static uint8_t necFindSyncStart(irCapture_t const* const p_capture) {
 	return NEC_IR_SYNC_NOT_FOUND;
 }
 
-static uint32_t necGetKeyCode(irCapture_t const* const p_capture, uint8_t start) {
-	if (p_capture == NULL) {
-		return false;
-	}
+static uint32_t necGetKeyCode(const irCapture_t *const p_capture, uint8_t start) {
 
 	uint32_t keyCode = 0;
 	uint8_t bitPos = 0;
 	uint8_t pos = start;
+
+	if (p_capture == NULL) {
+		return false;
+	}
 
 	do {
 		if ((necCheckKeyCodeLogicOne(p_capture, pos) == true)
@@ -61,20 +62,21 @@ static uint32_t necGetKeyCode(irCapture_t const* const p_capture, uint8_t start)
 		 */
 		return NEC_IR_KEYCODE_SEQUENCE_ERROR;
 		break;
-	} while ((pos += 2) < (start + NEC_IR_KEYCODE_NUM_EDGES) \
+	} while ((pos += 2) < (start + NEC_IR_KEYCODE_NUM_EDGES)
 			&& (bitPos ++ < NEC_IR_KEYCODE_NUM_BITS));
 	return keyCode;
 }
 
 
 
-uint32_t necDecode(irCapture_t const* const p_capture) {
+uint32_t necDecode(const irCapture_t *const p_capture) {
+
+	uint32_t keyCode = 0;
+	uint8_t pos = 0;
 
 	if (p_capture == NULL) {
 		return false;
 	}
-	uint32_t keyCode = 0;
-	uint8_t pos = 0;
 
 	pos = necFindSyncStart(p_capture);
 
