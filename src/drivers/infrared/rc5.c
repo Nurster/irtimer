@@ -33,7 +33,7 @@ static uint8_t rc5FindSyncStart(const irCapture_t *const p_capture) {
 uint16_t rc5Decode(const irCapture_t *const p_capture) {
 
 	uint16_t keyCode = 1 << RC5_IR_START_BIT;
-	rc5Phase_t phase = RC5_PHASE_LOGIC_ONE;
+	rc5Phase_t phase = RC5_PHASE_LOGIC_ONE; /* all falling edges are interpreted as logic ones from the start*/
 	uint8_t bitPos = RC5_IR_START_BIT + 1; /* begin from 1 since start bit at position 0 is always 1 */
 	uint8_t start = rc5FindSyncStart(p_capture); /* step through array to find first falling edge */
 	uint8_t pos = start + RC5_IR_START_EDGE;

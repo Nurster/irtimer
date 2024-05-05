@@ -86,14 +86,14 @@ uint32_t necDecode(const irCapture_t *const p_capture) {
 				/* advance to first data position to begin parsing of keycode */
 				pos += NEC_IR_KEYCODE_START_EDGE - 1;
 				keyCode = necGetKeyCode(p_capture, pos);
-				printStringSerial("key");
+				printStringSerial("\tkey\t");
 				return keyCode;
 		}
 	}
 	if (necCheckSyncRepeat(p_capture, pos + 1)
 			&& necCheckTail(p_capture, pos + 2)) {
 			keyCode = NEC_IR_REPEATCODE;
-			printStringSerial("repeat");
+			printStringSerial("\trepeat\t");
 			return keyCode;
 	}
 	return 0;

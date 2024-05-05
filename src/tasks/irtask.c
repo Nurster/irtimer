@@ -14,15 +14,16 @@
 #include "drivers/infrared/rc5.h"
 
 TaskHandle_t g_irTaskHandle = NULL;
-irCapture_t irCaptureIn;
+static irCapture_t irCaptureIn;
 
 void irTask(void *pvParameters __attribute__((unused))) {
 /*	uint8_t debugCounter = 0; */
+	 uint16_t capture[IR_MAX_EDGES];
 	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
 	TickType_t notifyTimeStamp = 0;
 	char debugOut[128];
-	setupInfrared();
+	setupInfrared(&capture[0]);
 	while (1) {
 
 		if (xTaskNotifyWait(0, 0, &notifyTimeStamp, pdMS_TO_TICKS(IR_NOTIFY_WAIT_MAX_MS)) == pdPASS) {
@@ -39,35 +40,10 @@ void irTask(void *pvParameters __attribute__((unused))) {
 	}
 }
 
-void tim3_isr(void) {
+void tim4_isr(void) {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	/*
-	 * causes debugger to hang frequently
-	 *
-	if (irCaptureIn.irTimeStamp != 0) {
-		return;
-	}
-	*/
 
-	if ((TIM_SR(IR_TIMER) & TIM_SR_UIF)
-			|| (irCaptureIn.irEdgeCount == IR_MAX_EDGES)) {
-		/*
-		 * either maximum edges got captured
-		 * or timer overflowed if no more edges arrived within timer period
-		 *
-		 * disable timer to arm for next input capture sequence
-		 */
-
-		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_CNT(IR_TIMER) = 0x0;
-		/*
-		 * put capture timestamp into capture and taskNofification
-		 * for later use
-		 */
-		irCaptureIn.irTimeStamp = xTaskGetTickCountFromISR();
-		/*
-		 * wake up irTask to process new data
-		 */
+	if (TIM_SR(IR_TIMER) & TIM_SR_UIF) {
 		xTaskNotifyFromISR(g_irTaskHandle, xTaskGetTickCountFromISR(), eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 		TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
@@ -76,9 +52,9 @@ void tim3_isr(void) {
 	/*
 	 * TIM_SR_CC3 is set to latch on rising edges
 	 */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC3IF) {
+	if (TIM_SR(IR_TIMER) & TIM_SR_CC1IF) {
 		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3IF);
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC1IF);
 		/* store time passed since last latch */
 		irCaptureIn.irEdges[irCaptureIn.irEdgeCount].irEdgeType = IR_EDGE_RISING;
 		irCaptureIn.irEdges[irCaptureIn.irEdgeCount].irMicroSeconds = TIM_CCR3(IR_TIMER);
@@ -90,9 +66,9 @@ void tim3_isr(void) {
 	/*
 	 * TIM_SR_CC4 is set to latch on falling edges
 	 */
-	if (TIM_SR(IR_TIMER) & TIM_SR_CC4IF) {
+	if (TIM_SR(IR_TIMER) & TIM_SR_CC2IF) {
 		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC4IF);
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC2IF);
 		irCaptureIn.irEdges[irCaptureIn.irEdgeCount].irEdgeType = IR_EDGE_FALLING;
 		irCaptureIn.irEdges[irCaptureIn.irEdgeCount].irMicroSeconds = TIM_CCR4(IR_TIMER);
 		irCaptureIn.irEdgeCount ++;
@@ -100,13 +76,13 @@ void tim3_isr(void) {
 		TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 	}
 
-	if (TIM_SR(IR_TIMER) & (TIM_SR_CC3OF | TIM_SR_CC4OF)) {
+	if (TIM_SR(IR_TIMER) & (TIM_SR_CC1OF | TIM_SR_CC1OF)) {
 		/*
 		 * ISR was processed to slow as to clear the capture registers
 		 * and new values arrived while they were sill occupied with old ones
 		 *
 		 * clear overcapture registers
 		 */
-		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC3OF | TIM_SR_CC4OF);
+		TIM_SR(IR_TIMER) &= ~(TIM_SR_CC1OF | TIM_SR_CC1OF);
 	}
 }
