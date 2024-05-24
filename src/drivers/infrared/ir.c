@@ -12,46 +12,32 @@
 #include "tasks/irtask.h"
 
 static void setupGpio(void) {
-	  gpio_set_mode(
+	gpio_set_mode(
 		IR_TIMER_GPIO_BANK,
 		GPIO_MODE_INPUT,
 		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
 		IR_TIMER_GPIO_PIN
-		);
-	}
-
-static void setupDma(uint16_t *buf) {
-	/*
-    dma_channel_reset(DMA1, DMA_CHANNEL1);
-    dma_set_peripheral_address(DMA1, DMA_CHANNEL1, (uint32_t)&TIM_DMAR(IR_TIMER));
-    dma_set_memory_address(DMA1, DMA_CHANNEL1, (uint32_t)buf);
-    dma_set_priority(DMA1, DMA_CHANNEL1, DMA_CCR_PL_LOW);
-    dma_set_read_from_peripheral(DMA1, DMA_CHANNEL1);
-    dma_set_memory_size(DMA1, DMA_CHANNEL1, DMA_CCR_MSIZE_16BIT);
-    dma_set_peripheral_size(DMA1, DMA_CHANNEL1, DMA_CCR_PSIZE_16BIT);
-    dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL1);
-    dma_set_number_of_data(DMA1, DMA_CHANNEL1, IR_MAX_EDGES + 1);
-    */
-
-
-    dma_channel_reset(DMA1, DMA_CHANNEL4);
-    dma_set_peripheral_address(DMA1, DMA_CHANNEL4, (uint32_t)&TIM_DMAR(IR_TIMER));
-    dma_set_memory_address(DMA1, DMA_CHANNEL4, (uint32_t)buf);
-    dma_set_priority(DMA1, DMA_CHANNEL4, DMA_CCR_PL_LOW);
-    dma_set_read_from_peripheral(DMA1, DMA_CHANNEL4);
-    dma_set_memory_size(DMA1, DMA_CHANNEL4, DMA_CCR_MSIZE_16BIT);
-    dma_set_peripheral_size(DMA1, DMA_CHANNEL4, DMA_CCR_PSIZE_16BIT);
-    dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL4);
-    dma_enable_circular_mode(DMA1, DMA_CHANNEL4);
-    dma_set_number_of_data(DMA1, DMA_CHANNEL4, IR_MAX_EDGES + 1);
-    dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNEL4);
+	);
 }
 
-void setupInfrared(uint16_t *buf) {
+static void setupdDma(uint16_t *p_buf) {
+	  dma_channel_reset(DMA1, DMA_CHANNEL4);
+	  dma_set_peripheral_address(DMA1, DMA_CHANNEL4, (uint32_t)&TIM_DMAR(IR_TIMER));
+	  dma_set_memory_address(DMA1, DMA_CHANNEL4, (uint32_t)p_buf);
+	  dma_set_priority(DMA1, DMA_CHANNEL4, DMA_CCR_PL_LOW);
+	  dma_set_read_from_peripheral(DMA1, DMA_CHANNEL4);
+	  dma_set_memory_size(DMA1, DMA_CHANNEL4, DMA_CCR_MSIZE_16BIT);
+	  dma_set_peripheral_size(DMA1, DMA_CHANNEL4, DMA_CCR_PSIZE_16BIT);
+	  dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL4);
+	  dma_enable_circular_mode(DMA1, DMA_CHANNEL4);
+	  dma_set_number_of_data(DMA1, DMA_CHANNEL4, IR_MAX_EDGES);
+}
+
+
+void setupInfrared(uint16_t *p_buf) {
 	setupGpio();
-	setupDma(buf);
-	nvic_enable_irq(NVIC_DMA1_CHANNEL4_IRQ);
-	/*nvic_enable_irq(NVIC_TIM4_IRQ);*/
+	setupdDma(p_buf);
+
 	rcc_periph_reset_pulse(RST_TIM4);
 	timer_set_mode(
 	  IR_TIMER,
@@ -68,9 +54,9 @@ void setupInfrared(uint16_t *buf) {
 
   /*
    * fire an update even only on overflow
-   */
-  TIM_CR1(IR_TIMER) |= TIM_CR1_URS;
-
+   *
+  *TIM_CR1(IR_TIMER) |= TIM_CR1_URS;
+  */
   /*
    * route channels 3 and 4 to timer input 4 to capture rising and falling edges
    */
@@ -109,40 +95,32 @@ void setupInfrared(uint16_t *buf) {
   *  enable dma requests and arm timer for capturing
   */
   TIM_DIER(IR_TIMER)
-  	  |= TIM_DIER_CC1DE
-  	  | TIM_DIER_CC2DE
-	  | TIM_DIER_UIE;
+  	  |= TIM_DIER_CC2DE;
 
-  /*DMA1_CCR1 |= DMA_CCR_EN;*/
   DMA1_CCR4 |= DMA_CCR_EN;
-
   TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 
 }
 
-void dma1_channel1_isr(void) {
-    if (DMA1_ISR & DMA_ISR_TCIF1) {
-        DMA1_IFCR |= DMA_IFCR_CTCIF1;
-        /*dma_disable_channel(DMA1, DMA_CHANNEL1);*/
-    }
-}
-
-void dma1_channel4_isr(void) {
-    if (DMA1_ISR & DMA_ISR_TCIF4) {
-        DMA1_IFCR |= DMA_IFCR_CTCIF4;
-        /*dma_disable_channel(DMA1, DMA_CHANNEL1);*/
-    }
-}
-bool irGenericCheckEdgeTime
-				(irCapture_t const* const p_capture,
-				uint8_t pos,
-				irEdgeType_t edgeType,
-				uint16_t timeBase) {
-	if ((p_capture->irEdges[pos].irEdgeType == edgeType)
-			&& (p_capture->irEdges[pos].irMicroSeconds > (timeBase - IR_SYNC_MARGIN_US))
-			&& (p_capture->irEdges[pos].irMicroSeconds < (timeBase + IR_SYNC_MARGIN_US))) {
+bool irGenericCheckTime	(const uint16_t *const p_capture,
+						uint16_t timeBase,
+						uint16_t timeMargin) {
+	if ((*p_capture > (timeBase - timeMargin))
+			&& (*p_capture < (timeBase + timeMargin))) {
 		return true;
 	} else {
 		return false;
 	}
+};
+
+bool irGenericFindSync	(const uint16_t *const p_capture,
+							uint8_t *const p_pos,
+							uint16_t syncUs) {
+	for (uint8_t i = 0; i < IR_MAX_EDGES; i++) {
+		if (irGenericCheckTime(&p_capture[i], syncUs, IR_SYNC_MARGIN_US)) {
+			*p_pos = i;
+			return true;
+		}
+	}
+	return false;
 }

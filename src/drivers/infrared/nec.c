@@ -12,89 +12,95 @@
 #include "drivers/serial/serial.h"
 #include "tasks/irtask.h"
 
-static uint8_t necFindSyncStart(const irCapture_t *const p_capture) {
 
-	if (p_capture == NULL) {
-		return 0;
-	}
-
-	uint8_t pos = 0;
-
-	do {
-		if (necCheckSyncStart(p_capture, pos) == true) {
-			return pos;
-			break;
-		}
-	} while (pos ++ < (IR_MAX_EDGES - NEC_IR_SYNC_NUM_EDGES));
-
-	return NEC_IR_SYNC_NOT_FOUND;
-}
-
-static uint32_t necGetKeyCode(const irCapture_t *const p_capture, uint8_t start) {
-
-	uint32_t keyCode = 0;
-	uint8_t bitPos = 0;
-	uint8_t pos = start;
-
-	if (p_capture == NULL) {
+static bool necCheckBoundary(uint8_t *p_pos) {
+	if (*p_pos >= (IR_MAX_EDGES)) {
+		*p_pos = 0;
+		return true;
+	} else {
 		return false;
 	}
+}
 
-	do {
-		if ((necCheckKeyCodeLogicOne(p_capture, pos) == true)
-				&& (necCheckTail(p_capture, pos + 1) == true)) {
-			keyCode |= (1 << bitPos);
-			continue;
-		}
-		if ((necCheckKeyCodeLogicZero(p_capture, pos) == true)
-				&& (necCheckTail(p_capture, pos + 1) == true)) {
-			/*
-			 * Check for timings only.
-			 * No need to fill in zeros as they are
-			 * already present through initialization.
-			 */
-			continue;
-		}
-		/*
-		 * If we got here none of the edge timings matched
-		 * and the whole sequence may be corrupted.
-		 * Bail out and fill the keycode with the appropriate errorno.
-		 */
-		return NEC_IR_KEYCODE_SEQUENCE_ERROR;
-		break;
-	} while ((pos += 2) < (start + NEC_IR_KEYCODE_NUM_EDGES)
-			&& (bitPos ++ < NEC_IR_KEYCODE_NUM_BITS));
-	return keyCode;
+static void debugPrintCapture (const uint16_t *const p_capture, uint8_t *p_pos, char *p_debug) {
+
+	sprintf(p_debug, "IR: debug:\t pos: \t%d\t µS: \t%hd\r\n", *p_pos, p_capture[*p_pos]);
+	printStringSerial(p_debug);
 }
 
 
+necKeyCode_t necGetCode(uint16_t *const p_capture, uint8_t *const p_pos) {
 
-uint32_t necDecode(const irCapture_t *const p_capture) {
+	uint8_t remainEdges = NEC_IR_KEYCODE_NUM_EDGES;
+	char debug[128];
+	uint8_t debugCounter = 0;
+	volatile necKeyCode_t keyCode = {
+			.necRaw = 0
+	};
 
-	uint32_t keyCode = 0;
-	uint8_t pos = 0;
-
-	if (p_capture == NULL) {
-		return false;
+	if (p_capture[*p_pos + 1] != 0) {
+/*		debugPrintCapture(p_capture, &*p_pos, debug); */
+		irGenericFindSync(p_capture, p_pos, NEC_IR_SYNC_BASE_US);
+		++ *p_pos;
+		necCheckBoundary(p_pos);
+	} else {
+		keyCode.necRaw = 0;
+		return keyCode;
 	}
 
-	pos = necFindSyncStart(p_capture);
-
-	if (pos <= (IR_MAX_EDGES - NEC_IR_KEYCODE_NUM_EDGES)) {
-		if (necCheckSyncKeyCode(p_capture, pos + 1)
-				&& necCheckTail(p_capture, pos + 2)) {
-				/* advance to first data position to begin parsing of keycode */
-				pos += NEC_IR_KEYCODE_START_EDGE - 1;
-				keyCode = necGetKeyCode(p_capture, pos);
-				printStringSerial("\tkey\t");
-				return keyCode;
+	if (necCheckSyncRepeat(&p_capture[*p_pos])) {
+		++ *p_pos;
+		necCheckBoundary(p_pos);
+		if (p_capture[*p_pos] == 0) {
+			++ *p_pos;
+			necCheckBoundary(p_pos);
+/*			vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_MS)); */
 		}
-	}
-	if (necCheckSyncRepeat(p_capture, pos + 1)
-			&& necCheckTail(p_capture, pos + 2)) {
-			keyCode = NEC_IR_REPEATCODE;
-			printStringSerial("\trepeat\t");
+		if (necCheckTail(&p_capture[*p_pos])) {
+/*			debugPrintCapture(p_capture, &*p_pos, debug); */
+			keyCode.necRaw = NEC_IR_REPEATCODE;
+
 			return keyCode;
+		}
 	}
-	return 0;
+
+	if (necCheckSyncKey(&p_capture[*p_pos])) {
+		++ *p_pos;
+		do {
+			debugCounter ++;
+			necCheckBoundary(p_pos);
+			if (p_capture[*p_pos] == 0) {
+				/* wait for DMA to catch up
+				 * */
+				vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_MS));
+			}
+			if (p_capture[*p_pos] < NEC_IR_EDGE_BOUNDARY
+					&& necCheckTail(&p_capture[*p_pos])) {
+				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
+				++ *p_pos;
+				continue;
+			}
+			if (p_capture[*p_pos] > NEC_IR_EDGE_BOUNDARY
+				&& necCheckKeyCodeLogicOne(&p_capture[*p_pos])) {
+				keyCode.necRaw >>= 1;
+				keyCode.necRaw |= NEC_IR_KEYCODE_SHIFT_MASK;
+				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
+				++ *p_pos;
+				continue;
+			}
+			else if (p_capture[*p_pos] > NEC_IR_EDGE_BOUNDARY
+				&& necCheckKeyCodeLogicZero(&p_capture[*p_pos])) {
+				keyCode.necRaw >>= 1;
+				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
+				++ *p_pos;
+				continue;
+			}
+			else {
+				keyCode.necRaw = NEC_IR_KEYCODE_SEQUENCE_ERROR;
+				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
+				break;
+			}
+		} while (remainEdges -- > 0);
+	}
+	return keyCode;
 }
