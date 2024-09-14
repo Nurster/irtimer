@@ -16,7 +16,8 @@ necKeyCode_t necCode;
 char keyOut[128];
 
 void uiTask(void *pvParameters __attribute__((unused))) {
-	while (2) {
+	printStringSerial("\tuser interface\r\n");
+	while (1) {
 		if (xTaskNotifyWait(0, 0, &necCode.necRaw, pdMS_TO_TICKS(1000)) == pdPASS) {
 			sprintf(keyOut, "\r\nUI:\tKeyCode received: %d\r\n", necCode.necKey);
 			printStringSerial(keyOut);

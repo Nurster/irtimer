@@ -38,14 +38,14 @@ necKeyCode_t necGetCode(uint16_t *const p_capture, uint8_t *const p_pos) {
 			.necRaw = 0
 	};
 
-	if (p_capture[*p_pos + 1] != 0) {
-/*		debugPrintCapture(p_capture, &*p_pos, debug); */
-		irGenericFindSync(p_capture, p_pos, NEC_IR_SYNC_BASE_US);
+	if (p_capture[*p_pos + 1] == 0) {
+		return keyCode;
+	}
+
+	/*		debugPrintCapture(p_capture, &*p_pos, debug); */
+	if (irGenericFindSync(p_capture, p_pos, NEC_IR_SYNC_BASE_US)) {
 		++ *p_pos;
 		necCheckBoundary(p_pos);
-	} else {
-		keyCode.necRaw = 0;
-		return keyCode;
 	}
 
 	if (necCheckSyncRepeat(&p_capture[*p_pos])) {
@@ -59,7 +59,7 @@ necKeyCode_t necGetCode(uint16_t *const p_capture, uint8_t *const p_pos) {
 		if (necCheckTail(&p_capture[*p_pos])) {
 /*			debugPrintCapture(p_capture, &*p_pos, debug); */
 			keyCode.necRaw = NEC_IR_REPEATCODE;
-
+			memset(p_capture, 0, IR_MAX_EDGES * sizeof(uint16_t));
 			return keyCode;
 		}
 	}
@@ -101,6 +101,8 @@ necKeyCode_t necGetCode(uint16_t *const p_capture, uint8_t *const p_pos) {
 				break;
 			}
 		} while (remainEdges -- > 0);
+		memset(p_capture, 0, IR_MAX_EDGES * sizeof(uint16_t));
+		return keyCode;
 	}
 	return keyCode;
 }

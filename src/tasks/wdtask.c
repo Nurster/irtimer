@@ -21,6 +21,7 @@ static void setupIndependentWatchdog(void) {
 
 void wdTask(void *pvParameters __attribute__((unused))) {
 	setupIndependentWatchdog();
+	printStringSerial("\twatchdog\r\n");
 	while (1) {
 		IWDG_KR = IWDG_KR_RESET;
 		vTaskDelay(pdMS_TO_TICKS(WD_RESET_INTERVAL_MS));

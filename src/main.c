@@ -43,6 +43,8 @@ static void setupClock(void) {
     rcc_periph_clock_enable(RCC_DMA1);
     rcc_periph_clock_enable(RCC_TIM4);
     rcc_periph_clock_enable(RCC_USART1);
+    rcc_periph_clock_enable(RCC_USART2);
+
 }
 
 int main(void) {
@@ -50,7 +52,7 @@ int main(void) {
 	volatile BaseType_t createResult;
 	setupClock();
 	setupSerial();
-	printStringSerial("Creating tasks...");
+	printStringSerial("Creating tasks...\r\n");
 	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 0, &g_wdTaskHandle);
 	createResult = xTaskCreate(uiTask, "User Interface", 400, NULL, 0, &g_uiTaskHandle);
 	createResult = xTaskCreate(irTask, "Infrared Parser", 800, NULL, 0, &g_irTaskHandle);

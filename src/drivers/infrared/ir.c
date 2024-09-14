@@ -53,7 +53,7 @@ void setupInfrared(uint16_t *p_buf) {
   TIM_ARR(IR_TIMER) = IR_IDLE_THRESHOLD_US;
 
   /*
-   * fire an update even only on overflow
+   * fire an update event only on overflow
    *
   *TIM_CR1(IR_TIMER) |= TIM_CR1_URS;
   */
@@ -85,14 +85,14 @@ void setupInfrared(uint16_t *p_buf) {
   	  |= IR_DMA_BURST_LENGTH << 8
 	  | IR_DMA_BASE_ADDRESS << 0;
 
-  /*
-   * update registers and clear the UIF before enabling interupts to prevent false trigger
-   */
+ /*
+  * update registers and clear the UIF before enabling interupts to prevent false trigger
+  */
   TIM_EGR(IR_TIMER) |= TIM_EGR_UG;
   TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
 
  /*
-  *  enable dma requests and arm timer for capturing
+  * enable dma requests and arm timer for capturing
   */
   TIM_DIER(IR_TIMER)
   	  |= TIM_DIER_CC2DE;
@@ -103,8 +103,8 @@ void setupInfrared(uint16_t *p_buf) {
 }
 
 bool irGenericCheckTime	(const uint16_t *const p_capture,
-						uint16_t timeBase,
-						uint16_t timeMargin) {
+							uint16_t timeBase,
+							uint16_t timeMargin) {
 	if ((*p_capture > (timeBase - timeMargin))
 			&& (*p_capture < (timeBase + timeMargin))) {
 		return true;

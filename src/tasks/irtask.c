@@ -24,15 +24,15 @@ void irTask(void *pvParameters __attribute__((unused))) {
 	volatile rc5KeyCode_t rc5Code;
 
 	setupInfrared(capture);
+	printStringSerial("\tinfrared\r\n");
 	while (1) {
-		vTaskDelay(pdMS_TO_TICKS(IRTASK_POLL_INTERVAL_MS));
+		vTaskDelay(pdMS_TO_TICKS(100));
 
 		necCode = necGetCode(capture, &pos);
 		if ((necCode.necRaw != 0)
 				&& (necCode.necRaw != IR_SYNC_NOT_FOUND)) {
 			xTaskNotify(g_uiTaskHandle, (uint32_t)necCode.necRaw, eSetValueWithOverwrite);
 			necCode.necRaw = 0;
-			memset(capture, 0, sizeof(capture));
 		}
 	}
 }
