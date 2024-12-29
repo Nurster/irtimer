@@ -8,6 +8,7 @@
 #define NEC_IR_SYNC_NOT_FOUND 0
 
 #define NEC_IR_EDGE_BOUNDARY NEC_IR_SYNC_BASE_US / 10
+#define NEC_IR_EDGE_COUNT 68
 
 #define NEC_IR_KEYCODE_WAIT_MS 10
 #define NEC_IR_KEYCODE_NUM_BITS 32
@@ -47,5 +48,5 @@ typedef union {
 	};
 } necKeyCode_t;
 
-necKeyCode_t necGetCode(uint16_t *const p_capture, uint8_t *const p_pos);
+necKeyCode_t necGetCode(uint16_t *const p_capture);
 

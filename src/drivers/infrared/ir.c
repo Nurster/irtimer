@@ -9,7 +9,32 @@
 #include <libopencm3/cm3/nvic.h>
 #include "globals.h"
 #include "drivers/infrared/ir.h"
+#include "drivers/serial/serial.h"
 #include "tasks/irtask.h"
+
+void dma1_channel4_isr (void) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	uint32_t irDmaInterruptStatusRegister;
+
+	irDmaInterruptStatusRegister = (uint32_t)DMA1_ISR;
+
+	if (DMA1_ISR & DMA_ISR_HTIF4) {
+		DMA1_CCR4 &= ~(DMA_CCR_EN);
+		DMA1_IFCR |= DMA_IFCR_CHTIF4;
+	}
+
+	if (DMA1_ISR & DMA_ISR_TCIF4) {
+		/*
+		TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
+		*/
+		DMA1_IFCR |= DMA_IFCR_CTCIF4;
+		DMA1_IFCR |= DMA_IFCR_CGIF4;
+		DMA1_CCR4 &= ~(DMA_CCR_EN);
+		xTaskNotifyFromISR(g_irTaskHandle, irDmaInterruptStatusRegister, eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
+	}
+}
 
 static void setupGpio(void) {
 	gpio_set_mode(
@@ -20,24 +45,26 @@ static void setupGpio(void) {
 	);
 }
 
-static void setupdDma(uint16_t *p_buf) {
+static void setupdDma(uint16_t *p_buf, uint8_t edgeCount) {
 	  dma_channel_reset(DMA1, DMA_CHANNEL4);
 	  dma_set_peripheral_address(DMA1, DMA_CHANNEL4, (uint32_t)&TIM_DMAR(IR_TIMER));
 	  dma_set_memory_address(DMA1, DMA_CHANNEL4, (uint32_t)p_buf);
 	  dma_set_priority(DMA1, DMA_CHANNEL4, DMA_CCR_PL_LOW);
 	  dma_set_read_from_peripheral(DMA1, DMA_CHANNEL4);
-	  dma_set_memory_size(DMA1, DMA_CHANNEL4, DMA_CCR_MSIZE_16BIT);
 	  dma_set_peripheral_size(DMA1, DMA_CHANNEL4, DMA_CCR_PSIZE_16BIT);
+	  dma_set_memory_size(DMA1, DMA_CHANNEL4, DMA_CCR_MSIZE_16BIT);
 	  dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL4);
 	  dma_enable_circular_mode(DMA1, DMA_CHANNEL4);
-	  dma_set_number_of_data(DMA1, DMA_CHANNEL4, IR_MAX_EDGES);
+	  dma_set_number_of_data(DMA1, DMA_CHANNEL4, edgeCount);
 }
 
 
-void setupInfrared(uint16_t *p_buf) {
+void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	setupGpio();
-	setupdDma(p_buf);
-
+	setupdDma(p_buf, edgeCount);
+	/*
+	 * nvic_enable_irq(NVIC_DMA1_CHANNEL4_IRQ);
+	 */
 	rcc_periph_reset_pulse(RST_TIM4);
 	timer_set_mode(
 	  IR_TIMER,
@@ -68,6 +95,9 @@ void setupInfrared(uint16_t *p_buf) {
 	  | TIM_CCMR1_CC1S_IN_TI1
 	  | TIM_CCMR1_CC2S_IN_TI1;
 
+/*
+ * set slave mode control register to reset mode so each rising edge resets the counter register
+ */
 
   TIM_SMCR(IR_TIMER)
   	  |= TIM_SMCR_TS_TI1FP1
@@ -82,11 +112,11 @@ void setupInfrared(uint16_t *p_buf) {
 	  | TIM_CCER_CC2P;
 
   TIM_DCR(IR_TIMER)
-  	  |= IR_DMA_BURST_LENGTH << 8
-	  | IR_DMA_BASE_ADDRESS << 0;
+  	  |= IR_DMA_BURST_LENGTH << 8 /* get two values in total from */
+	  | IR_DMA_BASE_ADDRESS << 0; /* first two counter registers */
 
  /*
-  * update registers and clear the UIF before enabling interupts to prevent false trigger
+  * update registers and clear the UIF to achieve a defined state and prevent false trigger
   */
   TIM_EGR(IR_TIMER) |= TIM_EGR_UG;
   TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
@@ -102,6 +132,21 @@ void setupInfrared(uint16_t *p_buf) {
 
 }
 
+static inline void irWaitDmaTransmitDone(void) {
+	while (DMA1_IFCR & DMA_IFCR_CTCIF4);
+}
+
+static inline void irWaitDmaDisabled(void) {
+	while (DMA1_CCR4 & DMA_CCR_EN);
+}
+
+
+void irResetDmaCounter(uint8_t edgeCount) {
+	DMA1_CCR4 &= ~(DMA_CCR_EN);
+	DMA1_CNDTR4 = edgeCount;
+	DMA1_CCR4 |= DMA_CCR_EN;
+}
+
 bool irGenericCheckTime	(const uint16_t *const p_capture,
 							uint16_t timeBase,
 							uint16_t timeMargin) {
@@ -115,12 +160,19 @@ bool irGenericCheckTime	(const uint16_t *const p_capture,
 
 bool irGenericFindSync	(const uint16_t *const p_capture,
 							uint8_t *const p_pos,
-							uint16_t syncUs) {
-	for (uint8_t i = 0; i < IR_MAX_EDGES; i++) {
+							uint16_t syncUs,
+							uint8_t edgeCount) {
+	for (uint8_t i = 0; i < edgeCount; i++) {
 		if (irGenericCheckTime(&p_capture[i], syncUs, IR_SYNC_MARGIN_US)) {
 			*p_pos = i;
 			return true;
 		}
 	}
 	return false;
+}
+
+void debugPrintCapture (const uint16_t *const p_capture, uint8_t *const p_pos, char *p_debug) {
+
+	sprintf(p_debug, "IR: debug:\t pos: \t%d\t µS: \t%hd\r\n", *p_pos, p_capture[*p_pos]);
+	printStringSerial(p_debug);
 }

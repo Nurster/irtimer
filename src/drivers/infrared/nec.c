@@ -12,97 +12,70 @@
 #include "drivers/serial/serial.h"
 #include "tasks/irtask.h"
 
-
-static bool necCheckBoundary(uint8_t *p_pos) {
-	if (*p_pos >= (IR_MAX_EDGES)) {
-		*p_pos = 0;
-		return true;
-	} else {
-		return false;
-	}
-}
-
-static void debugPrintCapture (const uint16_t *const p_capture, uint8_t *p_pos, char *p_debug) {
-
-	sprintf(p_debug, "IR: debug:\t pos: \t%d\t µS: \t%hd\r\n", *p_pos, p_capture[*p_pos]);
-	printStringSerial(p_debug);
-}
-
-
-necKeyCode_t necGetCode(uint16_t *const p_capture, uint8_t *const p_pos) {
+necKeyCode_t necGetCode(uint16_t *const p_capture) {
 
 	uint8_t remainEdges = NEC_IR_KEYCODE_NUM_EDGES;
+	uint8_t pos = 0;
 	char debug[128];
 	uint8_t debugCounter = 0;
 	volatile necKeyCode_t keyCode = {
 			.necRaw = 0
 	};
-
-	if (p_capture[*p_pos + 1] == 0) {
-		return keyCode;
+	/*		debugPrintCapture(p_capture, &pos, debug); */
+	if (irGenericFindSync(p_capture, &pos, NEC_IR_SYNC_BASE_US, IR_MAX_EDGES)) {
+		++ pos;
 	}
 
-	/*		debugPrintCapture(p_capture, &*p_pos, debug); */
-	if (irGenericFindSync(p_capture, p_pos, NEC_IR_SYNC_BASE_US)) {
-		++ *p_pos;
-		necCheckBoundary(p_pos);
-	}
-
-	if (necCheckSyncRepeat(&p_capture[*p_pos])) {
-		++ *p_pos;
-		necCheckBoundary(p_pos);
-		if (p_capture[*p_pos] == 0) {
-			++ *p_pos;
-			necCheckBoundary(p_pos);
+	if (necCheckSyncRepeat(&p_capture[pos])) {
+		++ pos;
+		if (p_capture[pos] == 0) {
+			++ pos;
 /*			vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_MS)); */
 		}
-		if (necCheckTail(&p_capture[*p_pos])) {
-/*			debugPrintCapture(p_capture, &*p_pos, debug); */
+		if (necCheckTail(&p_capture[pos])) {
+/*			debugPrintCapture(p_capture, &pos, debug); */
 			keyCode.necRaw = NEC_IR_REPEATCODE;
-			memset(p_capture, 0, IR_MAX_EDGES * sizeof(uint16_t));
 			return keyCode;
 		}
 	}
 
-	if (necCheckSyncKey(&p_capture[*p_pos])) {
-		++ *p_pos;
+	if (necCheckSyncKey(&p_capture[pos])) {
+		++ pos;
 		do {
 			debugCounter ++;
-			necCheckBoundary(p_pos);
-			if (p_capture[*p_pos] == 0) {
-				/* wait for DMA to catch up
-				 * */
+			if (p_capture[pos] == 0) {
+				/*
+				 * wait for DMA to catch up
+				 */
 				vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_MS));
 			}
-			if (p_capture[*p_pos] < NEC_IR_EDGE_BOUNDARY
-					&& necCheckTail(&p_capture[*p_pos])) {
-				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
-				++ *p_pos;
+			if (p_capture[pos] < NEC_IR_EDGE_BOUNDARY
+				&& necCheckTail(&p_capture[pos])) {
+				/* debugPrintCapture(p_capture, &pos, debug); */
+				++ pos;
 				continue;
 			}
-			if (p_capture[*p_pos] > NEC_IR_EDGE_BOUNDARY
-				&& necCheckKeyCodeLogicOne(&p_capture[*p_pos])) {
+			if (p_capture[pos] > NEC_IR_EDGE_BOUNDARY
+				&& necCheckKeyCodeLogicOne(&p_capture[pos])) {
 				keyCode.necRaw >>= 1;
 				keyCode.necRaw |= NEC_IR_KEYCODE_SHIFT_MASK;
-				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
-				++ *p_pos;
+				/*debugPrintCapture(p_capture, &pos, debug);*/
+				++ pos;
 				continue;
 			}
-			else if (p_capture[*p_pos] > NEC_IR_EDGE_BOUNDARY
-				&& necCheckKeyCodeLogicZero(&p_capture[*p_pos])) {
+			else if (p_capture[pos] > NEC_IR_EDGE_BOUNDARY
+				&& necCheckKeyCodeLogicZero(&p_capture[pos])) {
 				keyCode.necRaw >>= 1;
-				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
-				++ *p_pos;
+				/*debugPrintCapture(p_capture, &pos, debug);*/
+				++ pos;
 				continue;
 			}
 			else {
 				keyCode.necRaw = NEC_IR_KEYCODE_SEQUENCE_ERROR;
-				/*debugPrintCapture(p_capture, &*p_pos, debug);*/
+				/*debugPrintCapture(p_capture, &pos, debug);*/
 				break;
 			}
 		} while (remainEdges -- > 0);
-		memset(p_capture, 0, IR_MAX_EDGES * sizeof(uint16_t));
-		return keyCode;
 	}
 	return keyCode;
 }

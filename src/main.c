@@ -44,7 +44,6 @@ static void setupClock(void) {
     rcc_periph_clock_enable(RCC_TIM4);
     rcc_periph_clock_enable(RCC_USART1);
     rcc_periph_clock_enable(RCC_USART2);
-
 }
 
 int main(void) {

@@ -6,6 +6,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include "libopencm3/stm32/gpio.h"
 #include <libopencm3/stm32/timer.h>
+#include "libopencm3/stm32/dma.h"
 #include <libopencm3/cm3/nvic.h>
 #include "globals.h"
 #include "tasks/irtask.h"
@@ -17,22 +18,34 @@
 TaskHandle_t g_irTaskHandle = NULL;
 
 void irTask(void *pvParameters __attribute__((unused))) {
-/*	uint8_t debugCounter = 0; */
+	uint32_t irDmaInterruptStatusRegister = 0;
 	uint16_t capture[IR_MAX_EDGES];
-	uint8_t pos = 0;
 	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
+#ifdef IR_DEBUG
+	char debug[128];
+#endif
 
-	setupInfrared(capture);
+	setupInfrared(capture, IR_MAX_EDGES);
 	printStringSerial("\tinfrared\r\n");
 	while (1) {
-		vTaskDelay(pdMS_TO_TICKS(100));
+		if (DMA1_CNDTR4 < IR_MAX_EDGES) { /* dma started running and decrements its remaining transfers */
+			vTaskDelay(pdMS_TO_TICKS(RC5_IR_KEYCODE_WAIT_MS)); /* wait for the code receive to be finished */
+			rc5Code = rc5Decode(capture);
+			if ((rc5Code.rc5Raw != 0)
+					&& (rc5Code.rc5Raw != 255)) {
+				xTaskNotify(g_uiTaskHandle, (uint32_t)rc5Code.rc5Raw, eSetValueWithOverwrite);
+				rc5Code.rc5Raw = 0;
+			}
 
-		necCode = necGetCode(capture, &pos);
-		if ((necCode.necRaw != 0)
-				&& (necCode.necRaw != IR_SYNC_NOT_FOUND)) {
-			xTaskNotify(g_uiTaskHandle, (uint32_t)necCode.necRaw, eSetValueWithOverwrite);
-			necCode.necRaw = 0;
+#ifdef IR_DEBUG
+			for (uint8_t i = 0; i < IR_MAX_EDGES; i ++) {
+				debugPrintCapture(capture, &i, debug);
+			}
+#endif
+			memset(capture, 0, IR_MAX_EDGES * sizeof(*capture));
+			irResetDmaCounter(IR_MAX_EDGES);
+			/*debugPrintCapture(capture, 0, debug);*/
 		}
 	}
 }
