@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <libopencm3/stm32/rcc.h>
-#include "libopencm3/stm32/gpio.h"
+#include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/timer.h>
-#include "libopencm3/stm32/dma.h"
+#include <libopencm3/stm32/dma.h>
 #include <libopencm3/cm3/nvic.h>
 #include "globals.h"
 #include "drivers/infrared/ir.h"
@@ -43,6 +44,13 @@ static void setupGpio(void) {
 		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
 		IR_TIMER_GPIO_PIN
 	);
+	gpio_set_mode(
+		IR_LED_GPIO_BANK,
+		GPIO_MODE_OUTPUT_50_MHZ,
+		GPIO_CNF_OUTPUT_PUSHPULL,
+		IR_LED_GPIO_PIN
+	);
+
 }
 
 static void setupdDma(uint16_t *p_buf, uint8_t edgeCount) {

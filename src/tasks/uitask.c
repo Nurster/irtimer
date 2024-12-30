@@ -21,7 +21,7 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 	printStringSerial("\tuser interface\r\n");
 	while (1) {
 		if (xTaskNotifyWait(0, 0, (uint32_t*)&rc5Code.rc5Raw, pdMS_TO_TICKS(1000)) == pdPASS) {
-			sprintf(keyOut, "\r\nUI:\rraw data received: %d\r\n", rc5Code.rc5Key);
+			sprintf(keyOut, "\r\nUI:\rraw data received: %d\r\n", rc5Code.rc5Raw);
 			printStringSerial(keyOut);
 			rc5Code.rc5Raw = 0;
 		} else	{

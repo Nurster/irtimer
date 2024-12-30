@@ -8,6 +8,8 @@
 #include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/cm3/nvic.h>
 #include "tasks/wdtask.h"
+#include "drivers/serial/serial.h"
+
 
 TaskHandle_t g_wdTaskHandle;
 

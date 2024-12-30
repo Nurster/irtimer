@@ -25,7 +25,6 @@ OOCD_FILE = board/stm32f103c8_blue_pill.cfg
 #VPATH += $(SHARED_DIR)
 #INCLUDES += $(patsubst %,-I%, $(SHARED_DIR))
 
-
 OPENCM3_DIR=./libopencm3
 
 include $(OPENCM3_DIR)/mk/genlink-config.mk
