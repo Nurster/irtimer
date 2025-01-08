@@ -6,7 +6,6 @@
 #include "libopencm3/stm32/gpio.h"
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/cm3/nvic.h>
-#include "globals.h"
 #include "drivers/infrared/ir.h"
 #include "drivers/infrared/nec.h"
 #include "drivers/serial/serial.h"
@@ -21,7 +20,9 @@ necKeyCode_t necGetCode(uint16_t *const p_capture) {
 	volatile necKeyCode_t keyCode = {
 			.necRaw = 0
 	};
-	/*		debugPrintCapture(p_capture, &pos, debug); */
+#ifdef NEC_IR_DEBUG
+	debugPrintCapture(p_capture, &pos, debug);
+#endif
 	if (irGenericFindSync(p_capture, &pos, NEC_IR_SYNC_BASE_US, IR_MAX_EDGES)) {
 		++ pos;
 	}
@@ -30,7 +31,6 @@ necKeyCode_t necGetCode(uint16_t *const p_capture) {
 		++ pos;
 		if (p_capture[pos] == 0) {
 			++ pos;
-/*			vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_MS)); */
 		}
 		if (necCheckTail(&p_capture[pos])) {
 /*			debugPrintCapture(p_capture, &pos, debug); */
@@ -47,7 +47,7 @@ necKeyCode_t necGetCode(uint16_t *const p_capture) {
 				/*
 				 * wait for DMA to catch up
 				 */
-				vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_MS));
+				vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_DMA_MS));
 			}
 			if (p_capture[pos] < NEC_IR_EDGE_BOUNDARY
 				&& necCheckTail(&p_capture[pos])) {

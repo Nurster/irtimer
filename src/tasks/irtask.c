@@ -2,7 +2,7 @@
 #include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
-#include <stream_buffer.h>
+#include <queue.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/timer.h>
@@ -10,33 +10,52 @@
 #include <libopencm3/cm3/nvic.h>
 #include "globals.h"
 #include "tasks/irtask.h"
-#include "drivers/infrared/ir.h"
 #include "drivers/serial/serial.h"
+#include "drivers/infrared/ir.h"
 #include "drivers/infrared/nec.h"
 #include "drivers/infrared/rc5.h"
+#include "drivers/display/display.h"
+#include "drivers/display/st7789.h"
 
 TaskHandle_t g_irTaskHandle = NULL;
 
 void irTask(void *pvParameters __attribute__((unused))) {
 	uint32_t irDmaInterruptStatusRegister = 0;
 	uint16_t capture[IR_MAX_EDGES];
+	char *taskName = pcTaskGetName(xTaskGetCurrentTaskHandle());
+	char keyOut[128];
 	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
+	volatile uint16_t color = 0b0000011111111111;
+	displayBuffer_t buf = {
+			.p_buffer = &color,
+			.startx = 0,
+			.starty = 0,
+			.width = DISPLAY_WIDTH,
+			.height = DISPLAY_HEIGHT,
+	};
 #ifdef IR_DEBUG
 	char debug[128];
 #endif
 
 	setupInfrared(capture, IR_MAX_EDGES);
 	printStringSerial("\tinfrared\r\n");
+
 	while (1) {
-		if (DMA1_CNDTR4 != IR_MAX_EDGES) { /* dma started running and decrements its remaining transfers */
+		if (!(DMA1_CNDTR4 & IR_MAX_EDGES)) { /* dma started running and decrements its remaining transfers */
 			gpio_clear(IR_LED_GPIO_BANK, IR_LED_GPIO_PIN);
 			vTaskDelay(pdMS_TO_TICKS(RC5_IR_KEYCODE_WAIT_MS)); /* wait for the code receive to be finished */
 			rc5Code = rc5Decode(capture);
 			if ((rc5Code.rc5Raw != 0)
 					&& (rc5Code.rc5Raw != 255)) {
-				xTaskNotify(g_uiTaskHandle, (uint32_t)rc5Code.rc5Raw, eSetValueWithOverwrite);
+				sprintf(keyOut, "%s: key data received: %d\r\n", taskName, rc5Code.rc5Key);
+				printStringSerial(keyOut);
+				color = (color << 1) | (color >> 15);
 				rc5Code.rc5Raw = 0;
+				if (xQueueSendToBack(g_uiQueueHandle, &buf, pdMS_TO_TICKS(100)) == errQUEUE_FULL) {
+					sprintf(keyOut, "%s: queue full! \r\n", taskName);
+				}
+
 			}
 #ifdef IR_DEBUG
 			for (uint8_t i = 0; i < IR_MAX_EDGES; i ++) {

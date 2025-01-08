@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <FreeRTOS.h>
 #include <task.h>
+#include <queue.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/timer.h>
@@ -50,6 +51,7 @@ static void setupGpio(void) {
 		GPIO_CNF_OUTPUT_PUSHPULL,
 		IR_LED_GPIO_PIN
 	);
+	gpio_set(IR_LED_GPIO_BANK, IR_LED_GPIO_PIN);
 
 }
 
@@ -70,9 +72,7 @@ static void setupdDma(uint16_t *p_buf, uint8_t edgeCount) {
 void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	setupGpio();
 	setupdDma(p_buf, edgeCount);
-	/*
-	 * nvic_enable_irq(NVIC_DMA1_CHANNEL4_IRQ);
-	 */
+
 	rcc_periph_reset_pulse(RST_TIM4);
 	timer_set_mode(
 	  IR_TIMER,
@@ -81,22 +81,19 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	  TIM_CR1_DIR_UP
   );
 
-  /* count microseconds */
-  timer_set_prescaler(IR_TIMER, ((rcc_apb2_frequency) / 1000000));
-  timer_continuous_mode(IR_TIMER);
+/*
+* count microseconds
+*/
+	timer_set_prescaler(IR_TIMER, ((rcc_apb2_frequency) / 1000000));
+	timer_continuous_mode(IR_TIMER);
 
-  TIM_ARR(IR_TIMER) = IR_IDLE_THRESHOLD_US;
+	TIM_ARR(IR_TIMER) = IR_IDLE_THRESHOLD_US;
 
-  /*
-   * fire an update event only on overflow
-   *
-  *TIM_CR1(IR_TIMER) |= TIM_CR1_URS;
-  */
-  /*
-   * route channels 3 and 4 to timer input 4 to capture rising and falling edges
-   */
-  TIM_CCMR1(IR_TIMER)
-  	  |= TIM_CCMR1_IC1F_CK_INT_N_8
+/*
+* route channels 3 and 4 to timer input 4 to capture rising and falling edges
+*/
+	TIM_CCMR1(IR_TIMER)
+	  |= TIM_CCMR1_IC1F_CK_INT_N_8
 	  | TIM_CCMR1_IC2F_CK_INT_N_8
 	  | TIM_CCMR1_IC1PSC_OFF
 	  | TIM_CCMR1_IC2PSC_OFF
@@ -104,50 +101,40 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	  | TIM_CCMR1_CC2S_IN_TI1;
 
 /*
- * set slave mode control register to reset mode so each rising edge resets the counter register
- */
-
-  TIM_SMCR(IR_TIMER)
-  	  |= TIM_SMCR_TS_TI1FP1
+* set slave mode control register to reset mode so each rising edge resets the counter register
+*/
+	TIM_SMCR(IR_TIMER)
+	  |= TIM_SMCR_TS_TI1FP1
 	  | TIM_SMCR_SMS_RM;
 
-  /*
-   * configure channel 1 for rising and channel 2 for falling edges by reversing its polatity using CC2P
-   */
-  TIM_CCER(IR_TIMER)
-  	  |= TIM_CCER_CC1E
+/*
+* configure channel 1 for rising and channel 2 for falling edges by reversing its polatity using CC2P
+*/
+	TIM_CCER(IR_TIMER)
+	  |= TIM_CCER_CC1E
 	  | TIM_CCER_CC2E
 	  | TIM_CCER_CC2P;
 
-  TIM_DCR(IR_TIMER)
-  	  |= IR_DMA_BURST_LENGTH << 8 /* get two values in total from */
-	  | IR_DMA_BASE_ADDRESS << 0; /* first two counter registers */
+	TIM_DCR(IR_TIMER)
+	  |= IR_DMA_BURST_LENGTH << 8 /* get two values in total from ...*/
+	  | IR_DMA_BASE_ADDRESS << 0; /* ... first two counter registers */
 
- /*
-  * update registers and clear the UIF to achieve a defined state and prevent false trigger
-  */
-  TIM_EGR(IR_TIMER) |= TIM_EGR_UG;
-  TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
+/*
+* update registers and clear the UIF to achieve a defined state and prevent false trigger
+*/
+	TIM_EGR(IR_TIMER) |= TIM_EGR_UG;
+	TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
 
- /*
-  * enable dma requests and arm timer for capturing
-  */
-  TIM_DIER(IR_TIMER)
-  	  |= TIM_DIER_CC2DE;
+/*
+* enable dma requests and arm timer for capturing
+*/
+	TIM_DIER(IR_TIMER)
+	  |= TIM_DIER_CC2DE;
 
-  DMA1_CCR4 |= DMA_CCR_EN;
-  TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
+	DMA1_CCR4 |= DMA_CCR_EN;
+	TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;
 
 }
-
-static inline void irWaitDmaTransmitDone(void) {
-	while (DMA1_IFCR & DMA_IFCR_CTCIF4);
-}
-
-static inline void irWaitDmaDisabled(void) {
-	while (DMA1_CCR4 & DMA_CCR_EN);
-}
-
 
 void irResetDmaCounter(uint8_t edgeCount) {
 	DMA1_CCR4 &= ~(DMA_CCR_EN);

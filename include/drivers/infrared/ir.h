@@ -9,8 +9,8 @@
 #define IR_SYNC_MARGIN_US 140
 #define IR_SYNC_NOT_FOUND 255
 #define IR_IDLE_THRESHOLD_US 16 * 1000
-#define IR_DMA_CHANNEL_RISING
-#define IR_DMA_CHANNEL_FALLING
+#define IR_DMA_CHANNEL DMA_CHANNEL2
+#define IR_DMA DMA1
 #define IR_DMA_BURST_LENGTH 1 /* 0b1 = 2 transfers for both CC register values */
 
 #define IR_DMA_BASE_ADDRESS 0xD /* offset of CCR1 */

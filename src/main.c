@@ -25,6 +25,8 @@
 #include <stdbool.h>
 #include <FreeRTOS.h>
 #include <task.h>
+#include <queue.h>
+#include <semphr.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/timer.h>
@@ -56,8 +58,11 @@ int main(void) {
 	setupSerial();
 	printStringSerial("Creating tasks...\r\n");
 	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 0, &g_wdTaskHandle);
-	createResult = xTaskCreate(uiTask, "User Interface", 400, NULL, 0, &g_uiTaskHandle);
+	configASSERT(createResult);
+	createResult = xTaskCreate(uiTask, "User Interface", 2000, NULL, 0, &g_uiTaskHandle);
+	configASSERT(createResult);
 	createResult = xTaskCreate(irTask, "Infrared Parser", 800, NULL, 0, &g_irTaskHandle);
+	configASSERT(createResult);
 	vTaskStartScheduler();
 
 	return 0;
