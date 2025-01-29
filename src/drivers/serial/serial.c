@@ -12,10 +12,8 @@ void printStringSerial(char *string) {
 
 static void setupGpio(void) {
 	gpio_set_mode(
-		USARTGPIO, 
-		GPIO_MODE_OUTPUT_50_MHZ, 
-		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-		USARTRX | USARTTX);
+	USARTGPIO, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
+	USARTRX | USARTTX);
 }
 
 static void setupUsart(void) {

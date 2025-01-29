@@ -12,23 +12,26 @@
 #define DISPLAY_SPI_DMA_CHANNEL DMA_CHANNEL3
 
 typedef struct {
-	volatile uint16_t *p_buffer;
+	volatile uint32_t *p_buffer;
 	uint16_t startx;
-	uint16_t starty;
+    uint16_t starty;
 	uint16_t height;
 	uint16_t width;
+	uint16_t offsetx;
+	uint16_t offsety;
+	uint32_t dmaTransfersRemaining;
+	bool setMemoryWindow;
 	bool single;
 } displayBuffer_t;
 
 #include "drivers/display/st7789.h"
 void setupDisplay(void);
-void sendSpiDma(volatile uint16_t *p_buf, uint32_t len);
+void sendSpiDma(volatile uint32_t *p_buf, uint16_t len);
 void finishSpiDma(void);
 void sendSpiCommand(uint8_t command);
 void sendSpiData(uint16_t data);
 void sendSpiData16(uint16_t data);
 void initDisplay(void);
-void clearScreen(displayBuffer_t *p_buf);
+void clearScreen(volatile uint32_t *p_color);
 void sendBuffer(displayBuffer_t *p_buf);
-
 

@@ -14,24 +14,21 @@
 #include "drivers/display/display.h"
 #include "drivers/display/st7789.h"
 #include "drivers/serial/serial.h"
-
 #include "tasks/uitask.h"
 #include "tasks/irtask.h"
 
 static inline void waitSpiTxBufferEmpty(void) {
-    while (!(SPI_SR(DISPLAY_SPI) & SPI_SR_TXE)); /* wait until SPI-TX-Puffer is empty */
+	/* wait until SPI-TX-Puffer is empty */
+    while (!(SPI_SR(DISPLAY_SPI) & SPI_SR_TXE));
 }
 
 static inline void waitSpiTxTransferDone(void) {
-    while ((SPI_SR(DISPLAY_SPI) & SPI_SR_BSY)); /* wait for SPI to finish transfer */
-}
-
-static inline void waitDmaSpiTxDone(void) {
-    while ((DMA_ISR(DISPLAY_SPI_DMA) & DMA_ISR_TCIF3));
+	/* wait for SPI to finish transfer */
+    while ((SPI_SR(DISPLAY_SPI) & SPI_SR_BSY));
 }
 
 void dma1_channel3_isr (void) {
-
+	/* needed to tell uiTask when dma transfer is finished */
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	uint32_t irDmaInterruptStatusRegister = (uint32_t)DMA1_ISR;
 
@@ -62,7 +59,7 @@ static void setupSpi(void) {
 	/* spi_reset(SPI1); */
 	spi_init_master(
 		SPI1,
-		SPI_CR1_BAUDRATE_FPCLK_DIV_16,
+		SPI_CR1_BAUDRATE_FPCLK_DIV_64,
 		SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE,
 		SPI_CR1_CPHA_CLK_TRANSITION_2,
 		SPI_CR1_DFF_8BIT,
@@ -86,11 +83,15 @@ static void setupdDma(void) {
 	nvic_enable_irq(NVIC_DMA1_CHANNEL3_IRQ);
 }
 
-void sendSpiDma(volatile uint16_t *p_buf, uint32_t len) {
-    dma_set_memory_address(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, (uint32_t)p_buf); /* Startadresse der aktuellen Page vom Displaypuffer */
+void sendSpiDma(volatile uint32_t *p_buf, uint16_t len) {
+	/*ToDo
+	 *
+	 * NDT register is only 16 bit wide. For a full transfer of 320*240=
+	 */
+    dma_set_memory_address(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, (uint32_t)p_buf);
     dma_set_number_of_data(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, len);
-    spi_enable_tx_dma(DISPLAY_SPI); /* DRQ senden und Transfer starten. */
-    dma_enable_channel(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL); /* DMA-Kanal einschalten */
+    spi_enable_tx_dma(DISPLAY_SPI);
+    dma_enable_channel(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
 }
 
 void finishSpiDma(void) {
@@ -126,12 +127,3 @@ void setupDisplay(void) {
 	setupdDma();
 	initDisplay(); /* implemented in the driver file */
 }
-
-static inline void irWaitDmaTransmitDone(void) {
-	while (DMA1_IFCR & DMA_IFCR_CTCIF4);
-}
-
-static inline void irWaitDmaDisabled(void) {
-	while (DMA1_CCR4 & DMA_CCR_EN);
-}
-

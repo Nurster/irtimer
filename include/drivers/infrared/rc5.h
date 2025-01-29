@@ -18,7 +18,6 @@
 #define RC5_IR_KEYCODE_MASK 0x3F
 #define RC5_IR_KEYCODE_WAIT_MS 72
 
-
 #define rc5CheckBase(p_capture) \
 	irGenericCheckTime(p_capture, RC5_IR_BASE_US, RC5_IR_BASE_US / RC5_IR_MARGIN_DIVISOR)
 
@@ -40,19 +39,17 @@
 #define rc5CheckLastPhaseChange(p_capture) \
 	rc5CheckSingleBit(p_capture)
 
-
 typedef enum {
-	RC5_PHASE_LOGIC_ZERO,
-	RC5_PHASE_LOGIC_ONE
+	RC5_PHASE_LOGIC_ZERO, RC5_PHASE_LOGIC_ONE
 } rc5Phase_t;
 
 typedef union {
 	uint16_t rc5Raw;
 	struct {
-		uint8_t rc5Key 		: 6;
-		uint8_t rc5Address 	: 5;
-		uint8_t rc5Toggle 	: 1;
-		uint8_t rc5Start 	: 2;
+		uint8_t rc5Key :6;
+		uint8_t rc5Address :5;
+		uint8_t rc5Toggle :1;
+		uint8_t rc5Start :2;
 	};
 } rc5KeyCode_t;
 

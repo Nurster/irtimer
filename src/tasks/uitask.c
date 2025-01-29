@@ -29,29 +29,33 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 	bool dmaLock = false;
 	char out[128];
 	char *taskName = pcTaskGetName(xTaskGetCurrentTaskHandle());
-	volatile uint16_t color = 0x1;
+	volatile uint32_t color = 0x0;
 	displayBuffer_t buf = {
 			.p_buffer = &color,
 			.startx = 0,
 			.starty = 0,
-			.width = DISPLAY_WIDTH,
-			.height = DISPLAY_HEIGHT,
+			.width = DISPLAY_MEMORY_HEIGHT,
+			.height = DISPLAY_MEMORY_WIDTH,
+			.single = true
 	};
 
-	printStringSerial("\tuser interface\r\n");
-	g_uiQueueHandle = xQueueCreate(UI_QUEUE_SIZE, sizeof(displayBuffer_t *));
+	sprintf(out, "%s\r\n", taskName);
+	printStringSerial(out);
+
+	g_uiQueueHandle = xQueueCreate(UI_QUEUE_SIZE, sizeof(displayBuffer_t));
 	vQueueAddToRegistry(g_uiQueueHandle, "UI SPI DMA Queue");
 	configASSERT(g_uiQueueHandle == NULL);
 
 	setupDisplay();
-	clearScreen(&buf);
+	clearScreen(&color);
 	while (1) {
+		/* Todo decide whether a mutex or a variable is useful here */
 		switch (dmaLock) {
 		case false:
 			if (xQueueReceive(g_uiQueueHandle, &buf, pdMS_TO_TICKS(portMAX_DELAY)) == pdPASS) {
 				dmaLock = true;
 				sendBuffer(&buf);
-				snprintf(out, sizeof(out), "%s: found item in queue. Remaining: %lu\r\n", taskName, uxQueueMessagesWaiting(g_uiQueueHandle));
+				snprintf(out, sizeof(out), "%lu\t%s: found item in queue, remaining: %lu\r\n", xTaskGetTickCount(), taskName, uxQueueMessagesWaiting(g_uiQueueHandle));
 				printStringSerial(out);
 			}
 			break;
@@ -60,9 +64,8 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 				finishSpiDma();
 				dmaLock = false;
 			} else {
-				snprintf(out, sizeof(out), "%s: DMA transfer not complete after %d ms\r\n", taskName, UI_DMA_TIMEOUT_MS);
+				snprintf(out, sizeof(out), "%lu\t%s: DMA transfer not complete after %d ms!\r\n", xTaskGetTickCount(), taskName, UI_DMA_TIMEOUT_MS);
 				printStringSerial(out);
-
 			}
 		}
 	}

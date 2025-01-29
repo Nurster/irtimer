@@ -19,52 +19,50 @@
 #include "tasks/irtask.h"
 
 void initDisplay(void) {
-
 	gpio_clear(DISPLAY_SPI_BANK, DISPLAY_SPI_RS);
 	vTaskDelay(1);
 	gpio_set(DISPLAY_SPI_BANK, DISPLAY_SPI_RS);
 	vTaskDelay(1);
 	gpio_clear(DISPLAY_SPI_BANK, DISPLAY_SPI_DC);
 	spi_enable(DISPLAY_SPI);
-    sendSpiCommand(0x01); /* soft reset */
+	sendSpiCommand(DISPLAY_CMD_SOFT_RESET); /* soft reset */
 	vTaskDelay(1);
-    sendSpiCommand(0x11); /* sleep out */
+	sendSpiCommand(DISPLAY_CMD_SLEEP_OUT); /* sleep out */
 	vTaskDelay(1);
-	sendSpiCommand(0x13); /* normal display, use full area */
-	sendSpiCommand(0x21); /* inversion off */
-    sendSpiCommand(0x38); /* idle mode off */
-	sendSpiCommand(0x3a); /* set pixel color coding */
-    sendSpiData(DISPLAY_COLOR_DEPTH);
-    sendSpiCommand(0x36); /* memory access control */
-    sendSpiData((DISPLAY_ROTATION << 5) | (DISPLAY_PANEL_COLOR << 3)); /* scan mode and panel subpixel order*/
-    sendSpiCommand(0x29); /* display panel switch on */
-    vTaskDelay(2);
-    spi_disable(DISPLAY_SPI);
+	sendSpiCommand(DISPLAY_CMD_NORMAL_DISPLAY); /* normal display, use full area */
+	sendSpiCommand(DISPLAY_CMD_INVERSION_OFF); /* inversion off */
+	sendSpiCommand(DISPLAY_CMD_IDLE_MODE_OFF); /* idle mode off */
+	sendSpiCommand(DISPLAY_CMD_PIXEL_COLOR_CODING); /* set pixel color coding */
+	sendSpiData(DISPLAY_COLOR_DEPTH);
+	sendSpiCommand(DISPLAY_CMD_MEMORY_ACCESS_CONTROL); /* memory access control */
+	sendSpiData(DISPLAY_ROTATION | DISPLAY_PANEL_COLOR); /* scan mode and panel subpixel order*/
+	sendSpiCommand(DISPLAY_CMD_DISPLAY_PANEL_ON); /* display panel switch on */
+	vTaskDelay(2);
+	spi_disable(DISPLAY_SPI);
 }
 
 
-void setMemoryWriteWindow(uint16_t xStart, uint16_t yStart, uint16_t width, uint16_t height) {
+static void setMemoryWriteWindow(uint16_t xStart, uint16_t yStart, uint16_t width, uint16_t height) {
 
-		SPI_CR1(DISPLAY_SPI) |= SPI_CR1_DFF_16BIT;
-        sendSpiCommand(0x2a);
+	SPI_CR1(DISPLAY_SPI) |= SPI_CR1_DFF_16BIT;
+	sendSpiCommand(0x2a);
 
-        sendSpiData(xStart + DISPLAY_MEMORY_OFFSET_X);
-        sendSpiData(xStart + width + DISPLAY_MEMORY_OFFSET_X);
+	sendSpiData(xStart);
+	sendSpiData(xStart + width);
 
-        sendSpiCommand(0x2b);
-        sendSpiData(yStart + DISPLAY_MEMORY_OFFSET_Y);
-        sendSpiData(yStart + height + DISPLAY_MEMORY_OFFSET_Y);
-
-}
-
-void writeMemoryStart(void) {
-    sendSpiCommand(0x2c);
+	sendSpiCommand(0x2b);
+	sendSpiData(yStart);
+	sendSpiData(yStart + height);
 }
 
 void sendBuffer(displayBuffer_t *p_buf) {
 	spi_enable(DISPLAY_SPI);
-	setMemoryWriteWindow(p_buf->startx, p_buf->starty, p_buf->width - 1, p_buf->height - 1);
-	writeMemoryStart();
+	if (p_buf->setMemoryWindow == true) {
+		setMemoryWriteWindow(p_buf->startx, p_buf->starty, p_buf->width + p_buf->offsetx - 1, p_buf->height + p_buf->offsety - 1);
+	    sendSpiCommand(DISPLAY_CMD_WRITE_MEMORY_START);
+	} else {
+	    sendSpiCommand(DISPLAY_CMD_WRITE_MEMORY_CONTINUE);
+	}
     gpio_set(DISPLAY_SPI_BANK, DISPLAY_SPI_DC); /* set to data */
     /*DMA_CCR(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL) |= DMA_CCR_CIRC;*/
     dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_MSIZE_16BIT);
@@ -75,15 +73,70 @@ void sendBuffer(displayBuffer_t *p_buf) {
 	} else {
 		dma_enable_memory_increment_mode(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
 	}
-	sendSpiDma(p_buf->p_buffer, p_buf->width * p_buf->height);
+	sendSpiDma(p_buf->p_buffer, p_buf->dmaTransfersRemaining);
 }
 
-void clearScreen(displayBuffer_t *p_buf) {
+static void sendQueue(displayBuffer_t *p_buf) {
+	char out[128];
 
-
-	p_buf->single = true;
+	printStringSerial(out);
 	if (xQueueSendToBack(g_uiQueueHandle, p_buf, pdMS_TO_TICKS(100)) == errQUEUE_FULL) {
-		printStringSerial("Queue is full!\r\n");
+		sprintf(out, "%lu\t%s:Queue is full!\r\n", xTaskGetTickCount(), pcTaskGetName(xTaskGetCurrentTaskHandle()));
+		printStringSerial(out);
 	}
 }
+
+void sendBufferToQueue(displayBuffer_t *p_buf) {
+	/* this is necessary due to DMA_NDT is only 16 bits wide */
+	uint32_t dmaNumberOfTransfers = (p_buf->width * p_buf->height);
+	uint8_t dmaCntBoundaryHits = dmaNumberOfTransfers / UINT16_MAX;
+	uint16_t dmaCntTail = dmaNumberOfTransfers % UINT16_MAX;
+
+	if ((dmaCntBoundaryHits == 0) && (dmaCntTail == 0)) {
+		return;
+	}
+
+	p_buf->setMemoryWindow = true;
+	do {
+		if (dmaCntBoundaryHits != 0) {
+			p_buf->dmaTransfersRemaining = dmaCntBoundaryHits * UINT16_MAX;
+			sendQueue(p_buf);
+			if (p_buf->single == false) {
+				p_buf->p_buffer += UINT16_MAX;
+			}
+			/* don't reset our position just yet because we need it
+			 * to start from in pending transmissions */
+			p_buf->setMemoryWindow = false;
+			/* send tail in next transmission */
+			if (dmaCntTail != 0) {
+				continue;
+			}
+		}
+		if (dmaCntTail != 0) {
+			p_buf->dmaTransfersRemaining = dmaCntTail;
+			dmaCntTail = 0;
+			sendQueue(p_buf);
+		}
+	} while (dmaCntBoundaryHits -- > 0);
+}
+
+void clearScreen(volatile uint32_t *p_color) {
+	/*
+	 * Todo put real displayBuffer_t buffers into queue instead of pointers
+	 * to preserve different settings for each transfer
+	 */
+	displayBuffer_t t_buf;
+
+	t_buf.p_buffer = p_color;
+	t_buf.startx = 0,
+	t_buf.starty = 0,
+	t_buf.width = DISPLAY_MEMORY_WIDTH,
+	t_buf.height = DISPLAY_MEMORY_HEIGHT,
+	t_buf.offsetx = 0;
+	t_buf.offsety = 0;
+	t_buf.single = true;
+
+	sendBufferToQueue(&t_buf);
+}
+
 
