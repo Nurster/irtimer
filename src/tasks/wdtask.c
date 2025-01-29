@@ -22,8 +22,11 @@ static void setupIndependentWatchdog(void) {
 }
 
 void wdTask(void *pvParameters __attribute__((unused))) {
+	char *taskName = pcTaskGetName(xTaskGetCurrentTaskHandle());
+	char out[128];
 	setupIndependentWatchdog();
-	printStringSerial("\twatchdog\r\n");
+	sprintf(out, "\t%s\r\n", taskName);
+	printStringSerial(out);
 	while (1) {
 		IWDG_KR = IWDG_KR_RESET;
 		vTaskDelay(pdMS_TO_TICKS(WD_RESET_INTERVAL_MS));

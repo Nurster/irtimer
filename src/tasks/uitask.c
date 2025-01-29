@@ -39,7 +39,7 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 			.single = true
 	};
 
-	sprintf(out, "%s\r\n", taskName);
+	sprintf(out, "\t%s\r\n", taskName);
 	printStringSerial(out);
 
 	g_uiQueueHandle = xQueueCreate(UI_QUEUE_SIZE, sizeof(displayBuffer_t));

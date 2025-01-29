@@ -25,32 +25,31 @@ void initDisplay(void) {
 	vTaskDelay(1);
 	gpio_clear(DISPLAY_SPI_BANK, DISPLAY_SPI_DC);
 	spi_enable(DISPLAY_SPI);
-	sendSpiCommand(DISPLAY_CMD_SOFT_RESET); /* soft reset */
+	sendSpiCommand(DISPLAY_CMD_SOFT_RESET);
 	vTaskDelay(1);
-	sendSpiCommand(DISPLAY_CMD_SLEEP_OUT); /* sleep out */
+	sendSpiCommand(DISPLAY_CMD_SLEEP_OUT);
 	vTaskDelay(1);
-	sendSpiCommand(DISPLAY_CMD_NORMAL_DISPLAY); /* normal display, use full area */
-	sendSpiCommand(DISPLAY_CMD_INVERSION_OFF); /* inversion off */
-	sendSpiCommand(DISPLAY_CMD_IDLE_MODE_OFF); /* idle mode off */
-	sendSpiCommand(DISPLAY_CMD_PIXEL_COLOR_CODING); /* set pixel color coding */
+	sendSpiCommand(DISPLAY_CMD_NORMAL_DISPLAY);
+	sendSpiCommand(DISPLAY_CMD_INVERSION_OFF);
+	sendSpiCommand(DISPLAY_CMD_IDLE_MODE_OFF);
+	sendSpiCommand(DISPLAY_CMD_PIXEL_COLOR_CODING);
 	sendSpiData(DISPLAY_COLOR_DEPTH);
-	sendSpiCommand(DISPLAY_CMD_MEMORY_ACCESS_CONTROL); /* memory access control */
-	sendSpiData(DISPLAY_ROTATION | DISPLAY_PANEL_COLOR); /* scan mode and panel subpixel order*/
-	sendSpiCommand(DISPLAY_CMD_DISPLAY_PANEL_ON); /* display panel switch on */
+	sendSpiCommand(DISPLAY_CMD_MEMORY_ACCESS_CONTROL);
+	sendSpiData(DISPLAY_ROTATION | DISPLAY_PANEL_COLOR);
+	sendSpiCommand(DISPLAY_CMD_DISPLAY_PANEL_ON);
 	vTaskDelay(2);
 	spi_disable(DISPLAY_SPI);
 }
 
-
 static void setMemoryWriteWindow(uint16_t xStart, uint16_t yStart, uint16_t width, uint16_t height) {
 
 	SPI_CR1(DISPLAY_SPI) |= SPI_CR1_DFF_16BIT;
-	sendSpiCommand(0x2a);
+	sendSpiCommand(DISPLAY_CMD_COLUMN_ADDRESS_SET);
 
 	sendSpiData(xStart);
 	sendSpiData(xStart + width);
 
-	sendSpiCommand(0x2b);
+	sendSpiCommand(DISPLAY_CMD_ROW_ADDRESS_SET);
 	sendSpiData(yStart);
 	sendSpiData(yStart + height);
 }
@@ -64,7 +63,6 @@ void sendBuffer(displayBuffer_t *p_buf) {
 	    sendSpiCommand(DISPLAY_CMD_WRITE_MEMORY_CONTINUE);
 	}
     gpio_set(DISPLAY_SPI_BANK, DISPLAY_SPI_DC); /* set to data */
-    /*DMA_CCR(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL) |= DMA_CCR_CIRC;*/
     dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_MSIZE_16BIT);
 	dma_set_peripheral_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_PSIZE_16BIT);
 

@@ -14,52 +14,29 @@
 #include "drivers/serial/serial.h"
 #include "tasks/irtask.h"
 
-void dma1_channel4_isr(void) { /* not used */
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	uint32_t irDmaInterruptStatusRegister;
-
-	irDmaInterruptStatusRegister = (uint32_t) DMA1_ISR;
-
-	if (DMA1_ISR & DMA_ISR_HTIF4) {
-		DMA1_CCR4 &= ~(DMA_CCR_EN);
-		DMA1_IFCR |= DMA_IFCR_CHTIF4;
-	}
-
-	if (DMA1_ISR & DMA_ISR_TCIF4) {
-		/*
-		 TIM_CR1(IR_TIMER) &= ~(TIM_CR1_CEN);
-		 */
-		DMA1_IFCR |= DMA_IFCR_CTCIF4;
-		DMA1_IFCR |= DMA_IFCR_CGIF4;
-		DMA1_CCR4 &= ~(DMA_CCR_EN);
-		xTaskNotifyFromISR(g_irTaskHandle, irDmaInterruptStatusRegister,
-				eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-
-	}
-}
-
 static void setupGpio(void) {
 	gpio_set_mode(
-	IR_TIMER_GPIO_BANK,
-	GPIO_MODE_INPUT,
-	GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-	IR_TIMER_GPIO_PIN);
+		IR_TIMER_GPIO_BANK,
+		GPIO_MODE_INPUT,
+		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
+		IR_TIMER_GPIO_PIN
+	);
 	gpio_set_mode(
-	IR_LED_GPIO_BANK,
-	GPIO_MODE_OUTPUT_50_MHZ,
-	GPIO_CNF_OUTPUT_PUSHPULL,
-	IR_LED_GPIO_PIN);
+		IR_LED_GPIO_BANK,
+		GPIO_MODE_OUTPUT_50_MHZ,
+		GPIO_CNF_OUTPUT_PUSHPULL,
+		IR_LED_GPIO_PIN
+	);
 	gpio_set(
-	IR_LED_GPIO_BANK,
-	IR_LED_GPIO_PIN);
+		IR_LED_GPIO_BANK,
+		IR_LED_GPIO_PIN
+	);
 
 }
 
 static void setupdDma(uint16_t *p_buf, uint8_t edgeCount) {
 	dma_channel_reset(DMA1, DMA_CHANNEL4);
-	dma_set_peripheral_address(DMA1, DMA_CHANNEL4,
-			(uint32_t) &TIM_DMAR(IR_TIMER));
+	dma_set_peripheral_address(DMA1, DMA_CHANNEL4, (uint32_t) &TIM_DMAR(IR_TIMER));
 	dma_set_memory_address(DMA1, DMA_CHANNEL4, (uint32_t) p_buf);
 	dma_set_priority(DMA1, DMA_CHANNEL4, DMA_CCR_PL_LOW);
 	dma_set_read_from_peripheral(DMA1, DMA_CHANNEL4);

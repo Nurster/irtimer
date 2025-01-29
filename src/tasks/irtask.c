@@ -41,7 +41,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 #endif
 
 	setupInfrared(capture, IR_MAX_EDGES);
-	sprintf(out, "%s\r\n", taskName);
+	sprintf(out, "\t%s\r\n", taskName);
 	printStringSerial(out);
 
 	while (1) {
@@ -55,11 +55,6 @@ void irTask(void *pvParameters __attribute__((unused))) {
 				color = (color << 1) | (color >> 15);
 				rc5Code.rc5Raw = 0;
 				sendBufferToQueue(&buf);
-				/*
-				if (xQueueSendToBack(g_uiQueueHandle, &buf,	pdMS_TO_TICKS(100)) == errQUEUE_FULL) {
-					sprintf(out, "%s: key data received: %d\r\n", taskName,	rc5Code.rc5Key);
-				}
-				*/
 			}
 #ifdef IR_DEBUG
 			for (uint8_t i = 0; i < IR_MAX_EDGES; i ++) {
