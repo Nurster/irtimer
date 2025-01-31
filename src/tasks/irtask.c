@@ -27,13 +27,31 @@ void irTask(void *pvParameters __attribute__((unused))) {
 	char out[128];
 	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
-	volatile uint32_t color = 0xff;
+	volatile uint32_t color = 0xF;
+	/*
+	volatile pixel12Bit_t pixel = {
+			.redFirst = 0xa,
+			.greenFirst = 0xb,
+			.blueFirst = 0xc,
+			.redSecond = 0xd,
+			.greenSecond = 0xe,
+			.blueSecond = 0xf
+	};
+	*/
+	volatile pixel18Bit_t pixel = {
+			.red = 0x1a,
+			.green = 0x3b,
+			.blue = 0x1c
+	};
+
 	displayBuffer_t buf = {
-			.p_buffer = &color,
+			.p_buffer = (uint32_t*)&pixel,
 			.startx = 0,
 			.starty = 0,
 			.width = DISPLAY_WIDTH,
 			.height = DISPLAY_HEIGHT,
+			.offsetx = DISPLAY_MEMORY_OFFSET_X,
+			.offsety = DISPLAY_MEMORY_OFFSET_Y,
 			.single = true
 	};
 #ifdef IR_DEBUG

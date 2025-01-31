@@ -32,11 +32,15 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 	volatile uint32_t color = 0x0;
 	displayBuffer_t buf = {
 			.p_buffer = &color,
+			/*
 			.startx = 0,
 			.starty = 0,
 			.width = DISPLAY_MEMORY_HEIGHT,
 			.height = DISPLAY_MEMORY_WIDTH,
+			.offsetx = DISPLAY_MEMORY_OFFSET_X,
+			.offsety = DISPLAY_MEMORY_OFFSET_Y,
 			.single = true
+			*/
 	};
 
 	sprintf(out, "\t%s\r\n", taskName);
