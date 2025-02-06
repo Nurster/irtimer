@@ -27,7 +27,7 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 	necKeyCode_t necCode;
 	rc5KeyCode_t rc5Code;
 	bool dmaLock = false;
-	char out[128];
+	char out[DEBUG_OUTPUT_CHAR_SIZE];
 	char *taskName = pcTaskGetName(xTaskGetCurrentTaskHandle());
 	volatile uint32_t color = 0x0;
 	displayBuffer_t buf = {

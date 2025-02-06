@@ -24,11 +24,11 @@ void irTask(void *pvParameters __attribute__((unused))) {
 	uint32_t irDmaInterruptStatusRegister = 0;
 	uint16_t capture[IR_MAX_EDGES];
 	char *taskName = pcTaskGetName(xTaskGetCurrentTaskHandle());
-	char out[128];
+	char out[DEBUG_OUTPUT_CHAR_SIZE];
 	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
 	volatile uint32_t color = 0xF;
-	/*
+
 	volatile pixel12Bit_t pixel = {
 			.redFirst = 0xa,
 			.greenFirst = 0xb,
@@ -37,15 +37,15 @@ void irTask(void *pvParameters __attribute__((unused))) {
 			.greenSecond = 0xe,
 			.blueSecond = 0xf
 	};
-	*/
+/*
 	volatile pixel18Bit_t pixel = {
 			.red = 0x1a,
 			.green = 0x3b,
 			.blue = 0x1c
 	};
-
+*/
 	displayBuffer_t buf = {
-			.p_buffer = (uint32_t*)&pixel,
+			.p_buffer = (uint32_t*)&color,
 			.startx = 0,
 			.starty = 0,
 			.width = DISPLAY_WIDTH,
@@ -55,7 +55,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 			.single = true
 	};
 #ifdef IR_DEBUG
-	char debug[128];
+	char debug[DEBUG_OUTPUT_CHAR_SIZE];
 #endif
 
 	setupInfrared(capture, IR_MAX_EDGES);

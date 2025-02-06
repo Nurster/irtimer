@@ -35,16 +35,16 @@ static void setupGpio(void) {
 }
 
 static void setupdDma(uint16_t *p_buf, uint8_t edgeCount) {
-	dma_channel_reset(DMA1, DMA_CHANNEL4);
-	dma_set_peripheral_address(DMA1, DMA_CHANNEL4, (uint32_t) &TIM_DMAR(IR_TIMER));
-	dma_set_memory_address(DMA1, DMA_CHANNEL4, (uint32_t) p_buf);
-	dma_set_priority(DMA1, DMA_CHANNEL4, DMA_CCR_PL_LOW);
-	dma_set_read_from_peripheral(DMA1, DMA_CHANNEL4);
-	dma_set_peripheral_size(DMA1, DMA_CHANNEL4, DMA_CCR_PSIZE_16BIT);
-	dma_set_memory_size(DMA1, DMA_CHANNEL4, DMA_CCR_MSIZE_16BIT);
-	dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL4);
-	dma_enable_circular_mode(DMA1, DMA_CHANNEL4);
-	dma_set_number_of_data(DMA1, DMA_CHANNEL4, edgeCount);
+	dma_channel_reset(IR_DMA, IR_DMA_CHANNEL);
+	dma_set_peripheral_address(IR_DMA, IR_DMA_CHANNEL, (uint32_t) &TIM_DMAR(IR_TIMER));
+	dma_set_memory_address(IR_DMA, IR_DMA_CHANNEL, (uint32_t) p_buf);
+	dma_set_priority(IR_DMA, IR_DMA_CHANNEL, DMA_CCR_PL_LOW);
+	dma_set_read_from_peripheral(IR_DMA, IR_DMA_CHANNEL);
+	dma_set_peripheral_size(IR_DMA, IR_DMA_CHANNEL, DMA_CCR_PSIZE_16BIT);
+	dma_set_memory_size(IR_DMA, IR_DMA_CHANNEL, DMA_CCR_MSIZE_16BIT);
+	dma_enable_memory_increment_mode(IR_DMA, IR_DMA_CHANNEL);
+	dma_enable_circular_mode(IR_DMA, IR_DMA_CHANNEL);
+	dma_set_number_of_data(IR_DMA, IR_DMA_CHANNEL, edgeCount);
 }
 
 void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
@@ -56,10 +56,11 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	 * clocked interally, upcounting
 	 */
 	timer_set_mode(
-	IR_TIMER,
-	TIM_CR1_CKD_CK_INT,
-	TIM_CR1_CMS_EDGE,
-	TIM_CR1_DIR_UP);
+		IR_TIMER,
+		TIM_CR1_CKD_CK_INT,
+		TIM_CR1_CMS_EDGE,
+		TIM_CR1_DIR_UP
+	);
 
 	/*
 	 * count microseconds
@@ -72,9 +73,12 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	/*
 	 * route channels 3 and 4 to timer input 4 to capture rising and falling edges
 	 */
-	TIM_CCMR1(IR_TIMER) |= TIM_CCMR1_IC1F_CK_INT_N_8 | TIM_CCMR1_IC2F_CK_INT_N_8
-			| TIM_CCMR1_IC1PSC_OFF | TIM_CCMR1_IC2PSC_OFF
-			| TIM_CCMR1_CC1S_IN_TI1 | TIM_CCMR1_CC2S_IN_TI1;
+	TIM_CCMR1(IR_TIMER) |= TIM_CCMR1_IC1F_CK_INT_N_8
+			| TIM_CCMR1_IC2F_CK_INT_N_8
+			| TIM_CCMR1_IC1PSC_OFF
+			| TIM_CCMR1_IC2PSC_OFF
+			| TIM_CCMR1_CC1S_IN_TI1
+			| TIM_CCMR1_CC2S_IN_TI1;
 
 	/*
 	 * set slave mode control register to reset mode so each rising edge resets the counter register

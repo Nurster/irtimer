@@ -22,10 +22,10 @@ static uint8_t rc5FindSyncStart(uint16_t *const p_capture) {
 	do {
 		if (rc5CheckBase(&p_capture[pos])) {
 			if (rc5CheckSync(&p_capture[pos + 1])) {
-				return ++pos;
+				return ++ pos;
 			}
 		}
-	} while (pos++ < (IR_MAX_EDGES - RC5_IR_MAX_EDGES));
+	} while (pos ++ < (IR_MAX_EDGES - RC5_IR_MAX_EDGES));
 	/* no falling edge found whatsoever */
 	return RC5_IR_SYNC_NOT_FOUND;
 }
@@ -36,7 +36,7 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 	uint8_t shiftCount = 0;
 	uint8_t pos = rc5FindSyncStart(p_capture) + RC5_IR_START_OFFSET; /* step through array to find first sync pair */
 #ifdef RC5_IR_DEBUG
-	char debug[128];
+	char out[DEBUG_OUTPUT_CHAR_SIZE];
 	uint8_t debugCounter = 0;
 #endif
 
@@ -50,37 +50,34 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 
 	do {
 #ifdef RC5_IR_DEBUG
-		debugPrintCapture(p_capture, &pos, debug);
+		debugPrintCapture(p_capture, &pos, out);
 #endif
 		if (phase == RC5_PHASE_LOGIC_ONE) {
 			if (rc5CheckSingleBit(&p_capture[pos])) {
 				keyCode.rc5Raw = (keyCode.rc5Raw << 1) | RC5_IR_SHIFT_MASK;
-				shiftCount++;
+				shiftCount ++;
 				continue;
 			}
 
 			if (rc5CheckSinglePhaseChange(&p_capture[pos])) {
-				keyCode.rc5Raw =
-						(keyCode.rc5Raw << 2) | RC5_IR_PHASE_SHIFT_MASK;
+				keyCode.rc5Raw = (keyCode.rc5Raw << 2) | RC5_IR_PHASE_SHIFT_MASK;
 				shiftCount += 2;
 				phase = RC5_PHASE_LOGIC_ZERO;
 				continue;
 			}
 
 			if (rc5CheckDualPhaseChange(&p_capture[pos])) {
-				keyCode.rc5Raw =
-						(keyCode.rc5Raw << 2) | RC5_IR_PHASE_SHIFT_MASK;
+				keyCode.rc5Raw = (keyCode.rc5Raw << 2) | RC5_IR_PHASE_SHIFT_MASK;
 				shiftCount += 2;
 				continue;
 			}
 			if (rc5CheckLastSingleBit(&p_capture[pos - 1])) {
 				keyCode.rc5Raw = (keyCode.rc5Raw << 1) | RC5_IR_SHIFT_MASK;
-				shiftCount++;
+				shiftCount ++;
 				continue;
 			}
 			if (rc5CheckLastPhaseChange(&p_capture[pos - 1])) {
-				keyCode.rc5Raw =
-						(keyCode.rc5Raw << 2) | RC5_IR_PHASE_SHIFT_MASK;
+				keyCode.rc5Raw = (keyCode.rc5Raw << 2) | RC5_IR_PHASE_SHIFT_MASK;
 				shiftCount += 2;
 				continue;
 			}
@@ -90,13 +87,13 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 
 			if (rc5CheckSingleBit(&p_capture[pos])) {
 				keyCode.rc5Raw = (keyCode.rc5Raw << 1);
-				shiftCount++;
+				shiftCount ++;
 				continue;
 			}
 
 			if (rc5CheckSinglePhaseChange(&p_capture[pos])) {
 				keyCode.rc5Raw = (keyCode.rc5Raw << 1);
-				shiftCount++;
+				shiftCount ++;
 				phase = RC5_PHASE_LOGIC_ONE;
 				continue;
 			}
@@ -110,12 +107,12 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 
 			if (rc5CheckLastSingleBit(&p_capture[pos - 1])) {
 				keyCode.rc5Raw = (keyCode.rc5Raw << 1);
-				shiftCount++;
+				shiftCount ++;
 				continue;
 			}
 			if (rc5CheckLastPhaseChange(&p_capture[pos - 1])) {
 				keyCode.rc5Raw = (keyCode.rc5Raw << 1) | RC5_IR_PHASE_SHIFT_MASK;
-				shiftCount++;
+				shiftCount ++;
 				continue;
 			}
 		}

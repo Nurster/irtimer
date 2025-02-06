@@ -104,11 +104,11 @@ void sendBuffer(displayBuffer_t *p_buf) {
 }
 
 static void sendQueue(displayBuffer_t *p_buf) {
-	char out[128];
+	char out[DEBUG_OUTPUT_CHAR_SIZE];
 
 	printStringSerial(out);
 	if (xQueueSendToBack(g_uiQueueHandle, p_buf, pdMS_TO_TICKS(100)) == errQUEUE_FULL) {
-		sprintf(out, "%lu\t%s: Queue is full!\r\n", xTaskGetTickCount(), pcTaskGetName(xTaskGetCurrentTaskHandle()));
+		snprintf(out, sizeof(out), "%lu\t%s: Queue is full!\r\n", xTaskGetTickCount(), pcTaskGetName(xTaskGetCurrentTaskHandle()));
 		printStringSerial(out);
 	}
 }
@@ -133,8 +133,8 @@ void sendBufferToQueue(displayBuffer_t *p_buf) {
 		p_buf->dmaNumTransfersRemaining = (p_buf->width * p_buf->height) * DISPLAY_COMPLETE_TRANSFER_NUM_PIXELS;
 	#endif
 #endif
-	dmaBoundaryHits = p_buf->dmaNumTransfersRemaining / UINT16_MAX;
-	dmaTail = p_buf->dmaNumTransfersRemaining % UINT16_MAX;
+	dmaBoundaryHits = p_buf->dmaNumTransfersRemaining / DISPLAY_DMA_BOUNDARY;
+	dmaTail = p_buf->dmaNumTransfersRemaining % DISPLAY_DMA_BOUNDARY;
 	if (((dmaBoundaryHits == 0) && (dmaTail == 0))
 			|| (p_buf->p_buffer == NULL)) {
 		return;
@@ -143,28 +143,26 @@ void sendBufferToQueue(displayBuffer_t *p_buf) {
 	p_buf->setMemoryWindow = true;
 	do {
 		if (dmaBoundaryHits != 0) {
-			p_buf->dmaNumTransfersRemaining = dmaBoundaryHits * UINT16_MAX;
+			p_buf->dmaNumTransfersRemaining = dmaBoundaryHits * DISPLAY_DMA_BOUNDARY;
 			sendQueue(p_buf);
 			if (p_buf->single == false) {
-				p_buf->p_buffer += UINT16_MAX;
+				p_buf->p_buffer += DISPLAY_DMA_BOUNDARY;
 			}
 			/*
 			don't reset our position just yet because we need it
 			to start from in pending transmissions
 			*/
 			p_buf->setMemoryWindow = false;
-			/* send tail in next transmission */
-			if (dmaTail != 0) {
-				continue;
-			}
 		}
-		if (dmaTail != 0) {
+		if (dmaTail != 0 && dmaBoundaryHits == 0) {
 			p_buf->dmaNumTransfersRemaining = dmaTail;
 			dmaTail = 0;
 			sendQueue(p_buf);
 		}
 	} while (dmaBoundaryHits -- > 0);
 }
+
+
 
 void clearScreen(volatile uint32_t *p_color) {
 	/*
