@@ -14,7 +14,6 @@
 #include "drivers/display/display.h"
 #include "drivers/display/st7789.h"
 #include "drivers/serial/serial.h"
-
 #include "tasks/uitask.h"
 #include "tasks/irtask.h"
 
@@ -54,7 +53,7 @@ static void setMemoryWriteWindow(uint16_t xStart, uint16_t yStart,
 
 void sendBuffer(displayBuffer_t *p_buf) {
 	spi_enable(DISPLAY_SPI);
-	if (p_buf->setMemoryWindow == true) {
+	if (p_buf->start == true) {
 		setMemoryWriteWindow(p_buf->startx + p_buf->offsetx,
 				p_buf->starty + p_buf->offsety,
 				p_buf->width - 1,
@@ -66,40 +65,12 @@ void sendBuffer(displayBuffer_t *p_buf) {
 
     gpio_set(DISPLAY_SPI_BANK, DISPLAY_SPI_DC);
 
-    switch (p_buf->dmaMemoryWidthBits) {
-		case 8:
-		case 18:
-		default: {
-		    dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_MSIZE_8BIT);
-		    break;
-		}
-		case 16: {
-		    dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_MSIZE_16BIT);
-		    break;
-		}
-    }
-
-    switch (p_buf->dmaPeripheralWidthBits) {
-		case 8:
-		case 18:
-		default: {
-			dma_set_peripheral_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_PSIZE_8BIT);
-		    break;
-		}
-		case 16: {
-			dma_set_peripheral_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_PSIZE_16BIT);
-		    break;
-		}
-    }
-/*
-    dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_MSIZE_16BIT);
-	dma_set_peripheral_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_PSIZE_16BIT);
-*/
-	if (p_buf->single == true) {
+    if (p_buf->single == true) {
 		dma_disable_memory_increment_mode(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
 	} else {
 		dma_enable_memory_increment_mode(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
 	}
+
 	sendSpiDma(p_buf->p_buffer, p_buf->dmaNumTransfersRemaining);
 }
 
@@ -114,25 +85,21 @@ static void sendQueue(displayBuffer_t *p_buf) {
 }
 
 void sendBufferToQueue(displayBuffer_t *p_buf) {
-	/* this is necessary due to DMA_NDT is only 16 bits wide */
+
 	uint8_t dmaBoundaryHits = 0;
 	uint16_t dmaTail = 0;
-
 #ifdef DISPLAY_COLOR_DEPTH
 	#if DISPLAY_COLOR_DEPTH == DISPLAY_COLOR_DEPTH_12
-		p_buf->dmaMemoryWidthBits = 8;
-		p_buf->dmaPeripheralWidthBits = 8;
-		p_buf->dmaNumTransfersRemaining = ((p_buf->width * p_buf->height) * DISPLAY_BITS_PER_PIXEL) / p_buf->dmaMemoryWidthBits;
+		p_buf->dmaNumTransfersRemaining = ((p_buf->width * p_buf->height) * DISPLAY_BITS_PER_PIXEL) / DISPLAY_DMA_MSIZE;
 	#elif DISPLAY_COLOR_DEPTH == DISPLAY_COLOR_DEPTH_16
-		p_buf->dmaMemoryWidthBits = 16;
-		p_buf->dmaPeripheralWidthBits = 16;
 		p_buf->dmaNumTransfersRemaining = p_buf->width * p_buf->height;
 	#elif DISPLAY_COLOR_DEPTH == DISPLAY_COLOR_DEPTH_18
-		p_buf->dmaMemoryWidthBits = 8;
-		p_buf->dmaPeripheralWidthBits = 8;
 		p_buf->dmaNumTransfersRemaining = (p_buf->width * p_buf->height) * DISPLAY_COMPLETE_TRANSFER_NUM_PIXELS;
 	#endif
 #endif
+	/*
+	 * this is necessary due to DMA_NDT is only 16 bits wide
+	 */
 	dmaBoundaryHits = p_buf->dmaNumTransfersRemaining / DISPLAY_DMA_BOUNDARY;
 	dmaTail = p_buf->dmaNumTransfersRemaining % DISPLAY_DMA_BOUNDARY;
 	if (((dmaBoundaryHits == 0) && (dmaTail == 0))
@@ -140,7 +107,7 @@ void sendBufferToQueue(displayBuffer_t *p_buf) {
 		return;
 	}
 	/* send once to set window */
-	p_buf->setMemoryWindow = true;
+	p_buf->start = true;
 	do {
 		if (dmaBoundaryHits != 0) {
 			p_buf->dmaNumTransfersRemaining = dmaBoundaryHits * DISPLAY_DMA_BOUNDARY;
@@ -149,12 +116,12 @@ void sendBufferToQueue(displayBuffer_t *p_buf) {
 				p_buf->p_buffer += DISPLAY_DMA_BOUNDARY;
 			}
 			/*
-			don't reset our position just yet because we need it
-			to start from in pending transmissions
-			*/
-			p_buf->setMemoryWindow = false;
+			 * don't reset our position just yet because we need it
+			 * to start from in pending transmissions
+			 */
+			p_buf->start = false;
 		}
-		if (dmaTail != 0 && dmaBoundaryHits == 0) {
+		if (dmaBoundaryHits == 0 && dmaTail != 0) {
 			p_buf->dmaNumTransfersRemaining = dmaTail;
 			dmaTail = 0;
 			sendQueue(p_buf);

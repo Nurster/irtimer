@@ -20,9 +20,7 @@ typedef struct {
 	uint16_t offsetx;
 	uint16_t offsety;
 	uint32_t dmaNumTransfersRemaining;
-	uint8_t dmaMemoryWidthBits;
-	uint8_t dmaPeripheralWidthBits;
-	bool setMemoryWindow;
+	bool start;
 	bool single;
 } displayBuffer_t;
 

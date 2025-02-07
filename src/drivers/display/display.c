@@ -59,7 +59,7 @@ static void setupSpi(void) {
 	/* spi_reset(SPI1); */
 	spi_init_master(
 		SPI1,
-		SPI_CR1_BAUDRATE_FPCLK_DIV_64,
+		SPI_CR1_BAUDRATE_FPCLK_DIV_128,
 		SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE,
 		SPI_CR1_CPHA_CLK_TRANSITION_2,
 		SPI_CR1_DFF_8BIT,
@@ -75,8 +75,8 @@ static void setupdDma(void) {
 	dma_set_peripheral_address(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, (uint32_t)&SPI_DR(DISPLAY_SPI));
 	dma_set_priority(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_PL_LOW);
 	dma_set_read_from_memory(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
-	dma_set_peripheral_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_PSIZE_8BIT);
-	dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DMA_CCR_MSIZE_8BIT);
+	dma_set_peripheral_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DISPLAY_DMA_CCR_PSIZE);
+	dma_set_memory_size(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL, DISPLAY_DMA_CCR_MSIZE);
 	dma_enable_memory_increment_mode(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
 	dma_disable_peripheral_increment_mode(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
 	dma_enable_transfer_complete_interrupt(DISPLAY_SPI_DMA, DISPLAY_SPI_DMA_CHANNEL);
