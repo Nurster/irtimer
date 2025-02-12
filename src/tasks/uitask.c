@@ -18,6 +18,7 @@
 #include "drivers/infrared/ir.h"
 #include "drivers/infrared/nec.h"
 #include "drivers/infrared/rc5.h"
+#undef UI_DEBUG
 
 TaskHandle_t g_uiTaskHandle = NULL;
 QueueHandle_t g_uiQueueHandle = NULL;
@@ -59,8 +60,14 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 			if (xQueueReceive(g_uiQueueHandle, &buf, pdMS_TO_TICKS(portMAX_DELAY)) == pdPASS) {
 				dmaLock = true;
 				sendBuffer(&buf);
-				snprintf(out, sizeof(out), "%lu\t%s: found item in queue, remaining: %lu\r\n", xTaskGetTickCount(), taskName, uxQueueMessagesWaiting(g_uiQueueHandle));
+#ifdef UI_DEBUG
+				snprintf(out, sizeof(out), "%lu\t%s: found item in queue, remaining: %lu of %lu\r\n",
+						xTaskGetTickCount(),
+						taskName,
+						uxQueueMessagesWaiting(g_uiQueueHandle),
+						uxQueueGetQueueLength(g_uiQueueHandle));
 				printStringSerial(out);
+#endif
 			}
 			break;
 		case true:

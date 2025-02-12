@@ -9,13 +9,14 @@
 #define IR_SYNC_MARGIN_US 140
 #define IR_SYNC_NOT_FOUND 255
 #define IR_IDLE_THRESHOLD_US 16 * 1000
-#define IR_DMA_CHANNEL DMA_CHANNEL4
+#define IR_DMA_CHANNEL DMA_CHANNEL1
 #define IR_DMA DMA1
 #define IR_DMA_BURST_LENGTH 1 /* 0b1 = 2 transfers for both CC register values */
 #define IR_DMA_BASE_ADDRESS 0xD /* offset of CCR1 */
 
 void setupInfrared(uint16_t *p_buf, uint8_t edgeCount);
 void irResetDmaCounter(uint8_t edgeCount);
+void irResetTimer(void);
 
 bool irGenericFindSync
 		(const uint16_t *const p_capture,

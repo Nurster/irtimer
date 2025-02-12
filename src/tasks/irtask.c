@@ -16,7 +16,7 @@
 #include "drivers/infrared/rc5.h"
 #include "drivers/display/display.h"
 #include "drivers/display/st7789.h"
-
+#undef IR_DEBUG
 TaskHandle_t g_irTaskHandle = NULL;
 
 void irTask(void *pvParameters __attribute__((unused))) {
@@ -27,7 +27,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 	char out[DEBUG_OUTPUT_CHAR_SIZE];
 	volatile necKeyCode_t necCode;
 	volatile rc5KeyCode_t rc5Code;
-	volatile uint32_t color = 0xF;
+	volatile uint32_t color = 0xFF;
 
 	volatile pixel12Bit_t pixel = {
 			.redFirst = 0xa,

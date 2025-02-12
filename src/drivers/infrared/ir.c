@@ -71,7 +71,7 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	TIM_ARR(IR_TIMER) = IR_IDLE_THRESHOLD_US;
 
 	/*
-	 * route channels 3 and 4 to timer input 4 to capture rising and falling edges
+	 * route channels 1 and 2 to timer input 1 to capture rising and falling edges
 	 */
 	TIM_CCMR1(IR_TIMER) |= TIM_CCMR1_IC1F_CK_INT_N_8
 			| TIM_CCMR1_IC2F_CK_INT_N_8
@@ -83,7 +83,7 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	/*
 	 * set slave mode control register to reset mode so each rising edge resets the counter register
 	 */
-	TIM_SMCR(IR_TIMER) |= TIM_SMCR_TS_TI1FP1 | TIM_SMCR_SMS_RM;
+	TIM_SMCR(IR_TIMER) |= TIM_SMCR_TS_TI1F_ED | TIM_SMCR_SMS_RM;
 
 	/*
 	 * configure channel 1 for rising and channel 2 for falling edges by reversing its polatity using CC2P
@@ -100,9 +100,9 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
 
 	/*
-	 * enable dma requests and arm timer for capturing
+	 * enable dma request for second channel and arm timer for capturing
 	 */
-	TIM_DIER(IR_TIMER) |= TIM_DIER_CC2DE;
+	TIM_DIER(IR_TIMER) |= TIM_DIER_CC1DE;
 
 	DMA_CCR(IR_DMA, IR_DMA_CHANNEL) |= DMA_CCR_EN;
 	TIM_CR1(IR_TIMER) |= TIM_CR1_CEN;

@@ -79,7 +79,11 @@ static void sendQueue(displayBuffer_t *p_buf) {
 
 	printStringSerial(out);
 	if (xQueueSendToBack(g_uiQueueHandle, p_buf, pdMS_TO_TICKS(100)) == errQUEUE_FULL) {
-		snprintf(out, sizeof(out), "%lu\t%s: Queue is full!\r\n", xTaskGetTickCount(), pcTaskGetName(xTaskGetCurrentTaskHandle()));
+		snprintf(out, sizeof(out), "%lu\t%s: Queue is full with number of items: %lu of %lu\r\n",
+				xTaskGetTickCount(),
+				pcTaskGetName(xTaskGetCurrentTaskHandle()),
+				uxQueueMessagesWaiting(g_uiQueueHandle),
+				uxQueueGetQueueLength(g_uiQueueHandle));
 		printStringSerial(out);
 	}
 }
