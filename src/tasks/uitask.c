@@ -1,10 +1,26 @@
+/*
+ * (c) 2025 Nurster
+ * https://github.com/Nurster
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2
+ * or version 3 as published by the Free Software Foundation.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
-#include <semphr.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/timer.h>
@@ -18,7 +34,7 @@
 #include "drivers/infrared/ir.h"
 #include "drivers/infrared/nec.h"
 #include "drivers/infrared/rc5.h"
-#undef UI_DEBUG
+#define UI_DEBUG
 
 TaskHandle_t g_uiTaskHandle = NULL;
 QueueHandle_t g_uiQueueHandle = NULL;

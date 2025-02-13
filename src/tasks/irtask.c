@@ -1,3 +1,20 @@
+/*
+ * (c) 2025 Nurster
+ * https://github.com/Nurster
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2
+ * or version 3 as published by the Free Software Foundation.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 #include <stdio.h>
 #include <string.h>
 #include <FreeRTOS.h>
@@ -60,7 +77,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 #endif
 
 	setupInfrared(capture, IR_MAX_EDGES);
-	sprintf(out, "\t%s\r\n", taskName);
+	snprintf(out, sizeof(out), "\t%s\r\n", taskName);
 	printStringSerial(out);
 
 	while (1) {
@@ -72,7 +89,7 @@ void irTask(void *pvParameters __attribute__((unused))) {
 #ifdef NEC_IR_DECODE
 			necCode = necDecode(capture);
 			if ((necCode.necRaw != 0) && (necCode.necRaw != 255)) {
-				sprintf(out, "%lu\t%s: NEC key data received: %d\r\n", xTaskGetTickCount(), taskName, necCode.necKey);
+				snprintf(out, sizeof(out), "%lu\t%s: NEC key data received: %d\r\n", xTaskGetTickCount(), taskName, necCode.necKey);
 				printStringSerial(out);
 
 				necCode.necRaw = 0;

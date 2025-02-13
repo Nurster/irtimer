@@ -1,19 +1,20 @@
 /*
+ * (c) 2025 Nurster
+ * https://github.com/Nurster
  *
- * This library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2
+ * or version 3 as published by the Free Software Foundation.
  *
- * This library is distributed in the hope that it will be useful,
+ * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -53,9 +54,9 @@ int main(void) {
 	printStringSerial("Creating tasks...\r\n");
 	createResult = xTaskCreate(irTask, "Infrared Parser", 800, NULL, 0, &g_irTaskHandle);
 	configASSERT(createResult);
-	createResult = xTaskCreate(uiTask, "User Interface", 2000, NULL, 0, &g_uiTaskHandle);
+	createResult = xTaskCreate(uiTask, "User Interface", 2000, NULL, 1, &g_uiTaskHandle);
 	configASSERT(createResult);
-	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 0, &g_wdTaskHandle);
+	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 2, &g_wdTaskHandle);
 	configASSERT(createResult);
 	vTaskStartScheduler();
 
