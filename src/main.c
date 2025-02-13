@@ -51,11 +51,11 @@ int main(void) {
 	setupClock();
 	setupSerial();
 	printStringSerial("Creating tasks...\r\n");
-	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 0, &g_wdTaskHandle);
+	createResult = xTaskCreate(irTask, "Infrared Parser", 800, NULL, 0, &g_irTaskHandle);
 	configASSERT(createResult);
 	createResult = xTaskCreate(uiTask, "User Interface", 2000, NULL, 0, &g_uiTaskHandle);
 	configASSERT(createResult);
-	createResult = xTaskCreate(irTask, "Infrared Parser", 800, NULL, 0, &g_irTaskHandle);
+	createResult = xTaskCreate(wdTask, "Watchdog", 200, NULL, 0, &g_wdTaskHandle);
 	configASSERT(createResult);
 	vTaskStartScheduler();
 

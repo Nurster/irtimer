@@ -81,7 +81,8 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 			| TIM_CCMR1_CC2S_IN_TI1;
 
 	/*
-	 * set slave mode control register to reset mode so each rising edge resets the counter register
+	 * set slave mode control register to reset mode
+	 * use the edge detector on TI1 to reset on every edge
 	 */
 	TIM_SMCR(IR_TIMER) |= TIM_SMCR_TS_TI1F_ED | TIM_SMCR_SMS_RM;
 
@@ -100,7 +101,7 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount) {
 	TIM_SR(IR_TIMER) &= ~(TIM_SR_UIF);
 
 	/*
-	 * enable dma request for second channel and arm timer for capturing
+	 * enable dma request for channel 1 and arm dma + timer for capturing
 	 */
 	TIM_DIER(IR_TIMER) |= TIM_DIER_CC1DE;
 
@@ -124,18 +125,7 @@ bool irGenericCheckTime(const uint16_t *const p_capture, uint16_t timeBase,
 		return false;
 	}
 }
-;
 
-bool irGenericFindSync(const uint16_t *const p_capture, uint8_t *const p_pos,
-		uint16_t syncUs, uint8_t edgeCount) {
-	for (uint8_t i = 0; i < edgeCount; i++) {
-		if (irGenericCheckTime(&p_capture[i], syncUs, IR_SYNC_MARGIN_US)) {
-			*p_pos = i;
-			return true;
-		}
-	}
-	return false;
-}
 
 void debugPrintCapture(const uint16_t *const p_capture, uint8_t *const p_pos,
 		char *p_debug) {

@@ -18,12 +18,6 @@ void setupInfrared(uint16_t *p_buf, uint8_t edgeCount);
 void irResetDmaCounter(uint8_t edgeCount);
 void irResetTimer(void);
 
-bool irGenericFindSync
-		(const uint16_t *const p_capture,
-		uint8_t *const p_pos,
-		uint16_t syncUs,
-		uint8_t edgeCount);
-
 bool irGenericCheckTime
 		(const uint16_t *const p_capture,
 		uint16_t timeBase,

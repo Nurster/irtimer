@@ -34,7 +34,7 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 
 	rc5Phase_t phase = RC5_PHASE_LOGIC_ONE; /* all falling edges are interpreted as logic ones from the start */
 	uint8_t shiftCount = 0;
-	uint8_t pos = rc5FindSyncStart(p_capture) + RC5_IR_START_OFFSET; /* step through array to find first sync pair */
+	uint8_t pos = rc5FindSyncStart(p_capture) + RC5_IR_START_OFFSET;
 	uint16_t check = 0;
 #ifdef RC5_IR_DEBUG
 	char out[128];
@@ -45,7 +45,7 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 	if (p_capture == NULL || pos == 0) {
 		return keyCode;
 	} else {
-		keyCode.rc5Raw = (1 << 0); /* first Bit is always logic one */
+		keyCode.rc5Raw = (1 << 0); /* RC5 protocol defines first Bit to be always logic one */
 		shiftCount = 1;
 	}
 
@@ -53,6 +53,10 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 #ifdef RC5_IR_DEBUG
 		debugPrintCapture(p_capture, &pos, out);
 #endif
+		/*
+		 * add up two registers in order to have unique values
+		 * that can be used as lookup table
+		 */
 		check =  p_capture[pos] + p_capture[pos + 1];
 		if (phase == RC5_PHASE_LOGIC_ONE) {
 			if (rc5CheckSingleBit(&check)) {
@@ -95,16 +99,11 @@ rc5KeyCode_t rc5Decode(uint16_t *const p_capture) {
 		keyCode.rc5Raw = RC5_IR_KEYCODE_SEQUENCE_ERROR;
 		return keyCode;
 	} while ((shiftCount < (RC5_IR_NUM_BITS)) && ((pos += 2) < (IR_MAX_EDGES)));
-	/*
-	 * only fetch the second timers register since
-	 * it contains the sum of first plus its own
-	 */
 
 	if ((pos > IR_MAX_EDGES) || (shiftCount != RC5_IR_NUM_BITS)) {
 		keyCode.rc5Raw = RC5_IR_KEYCODE_SEQUENCE_ERROR;
 		return keyCode;
 	}
-
 	/* stretch into 16 Bit while maintaining keycode at right most position */
 	keyCode.rc5Raw = ((keyCode.rc5Raw & ~(RC5_IR_KEYCODE_MASK)) << 2)
 		| (keyCode.rc5Raw & RC5_IR_KEYCODE_MASK);

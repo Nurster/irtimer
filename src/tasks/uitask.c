@@ -75,7 +75,8 @@ void uiTask(void *pvParameters __attribute__((unused))) {
 				finishSpiDma();
 				dmaLock = false;
 			} else {
-				snprintf(out, sizeof(out), "%lu\t%s: DMA transfer not complete after %d ms!\r\n", xTaskGetTickCount(), taskName, UI_DMA_TIMEOUT_MS);
+				snprintf(out, sizeof(out), "%lu\t%s: DMA transfer not complete after %d ms!\r\n", \
+						xTaskGetTickCount(), taskName, UI_DMA_TIMEOUT_MS);
 				printStringSerial(out);
 			}
 		}

@@ -16,7 +16,8 @@
 #include "drivers/infrared/rc5.h"
 #include "drivers/display/display.h"
 #include "drivers/display/st7789.h"
-#undef IR_DEBUG
+#define IR_DEBUG
+#define NEC_IR_DECODE
 TaskHandle_t g_irTaskHandle = NULL;
 
 void irTask(void *pvParameters __attribute__((unused))) {
@@ -63,18 +64,24 @@ void irTask(void *pvParameters __attribute__((unused))) {
 	printStringSerial(out);
 
 	while (1) {
-		if (!(DMA_CNDTR(IR_DMA, IR_DMA_CHANNEL) & IR_MAX_EDGES)) { /* dma started running and decrements its remaining transfers */
+		/* dma started running and decrements its remaining transfers */
+		if (DMA_CNDTR(IR_DMA, IR_DMA_CHANNEL) < IR_MAX_EDGES) {
 			gpio_clear(IR_LED_GPIO_BANK, IR_LED_GPIO_PIN);
-			vTaskDelay(pdMS_TO_TICKS(RC5_IR_KEYCODE_WAIT_MS)); /* wait for the code receive to be finished */
-			rc5Code = rc5Decode(capture);
-			if ((rc5Code.rc5Raw != 0) && (rc5Code.rc5Raw != 255)) {
-				sprintf(out, "%lu\t%s: key data received: %d\r\n", xTaskGetTickCount(), taskName, rc5Code.rc5Key);
+			/* wait for the code receive to be advanced further */
+			vTaskDelay(pdMS_TO_TICKS(NEC_IR_KEYCODE_WAIT_DMA_MS));
+#ifdef NEC_IR_DECODE
+			necCode = necDecode(capture);
+			if ((necCode.necRaw != 0) && (necCode.necRaw != 255)) {
+				sprintf(out, "%lu\t%s: NEC key data received: %d\r\n", xTaskGetTickCount(), taskName, necCode.necKey);
 				printStringSerial(out);
+
+				necCode.necRaw = 0;
 				color = (color << 1) | (color >> 15);
-				rc5Code.rc5Raw = 0;
 				sendBufferToQueue(&buf);
+
 			}
-#ifdef IR_DEBUG
+#endif
+#ifdef IR_DEBUG_PRINT
 			for (uint8_t i = 0; i < IR_MAX_EDGES; i ++) {
 				debugPrintCapture(capture, &i, debug);
 			}
