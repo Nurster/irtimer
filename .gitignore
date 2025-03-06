@@ -3,6 +3,8 @@ Binaries
 Archives
 bin
 ld
+.d
+.a
 .log
 .ini
 .trace
